@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../services/auth_service.dart';
 import '../services/onboarding_service.dart';
 import '../utils/app_colors.dart';
 import 'family_setup_screen.dart';
-import 'lock_screen.dart';
 import 'main_shell.dart';
-import 'pin_setup_screen.dart';
 import 'tutorial_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -34,16 +31,8 @@ class _SplashScreenState extends State<SplashScreen> {
       _go(const TutorialScreen());
       return;
     }
-    if (!await ob.hasSetPin() && !(await AuthService.instance.hasPin())) {
-      _go(const PinSetupScreen());
-      return;
-    }
     if (!await ob.hasCompletedFamilySetup()) {
       _go(const FamilySetupScreen());
-      return;
-    }
-    if (await AuthService.instance.isLockEnabled()) {
-      _go(const LockScreen());
       return;
     }
     _go(const MainShell());
@@ -154,7 +143,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 bottom: 32,
                 child: Center(
                   child: Text(
-                    '🔐 Local-first  •  No cloud  •  No ads',
+                    '🗂️ Local-first  •  No cloud  •  No ads',
                     style: GoogleFonts.nunito(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,

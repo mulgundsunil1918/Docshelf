@@ -1,16 +1,13 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:timezone/data/latest.dart' as tz;
 
 import 'screens/splash_screen.dart';
 import 'services/category_service.dart';
 import 'services/document_notifier.dart';
-import 'services/notification_service.dart';
 import 'services/onboarding_service.dart';
 import 'services/profile_service.dart';
 import 'utils/app_theme.dart';
@@ -25,14 +22,9 @@ Future<void> main() async {
     databaseFactory = databaseFactoryFfi;
   }
 
-  tz.initializeTimeZones();
-
   // Bootstrap critical singletons before first frame.
   await CategoryService.instance.load();
   await ProfileService.instance.load();
-  await NotificationService.instance.init();
-  // Re-register expiry reminders (covers reinstall/reboot).
-  unawaited(NotificationService.instance.rescheduleAllReminders());
 
   final themeMode = await OnboardingService.instance.getThemeMode();
 

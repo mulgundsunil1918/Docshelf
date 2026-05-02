@@ -12,7 +12,6 @@ import '../models/document.dart';
 import '../services/database_service.dart';
 import '../services/document_notifier.dart';
 import '../services/file_storage_service.dart';
-import '../services/notification_service.dart';
 import '../utils/app_colors.dart';
 import 'document_properties_screen.dart';
 
@@ -70,9 +69,6 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
     if (ok != true) return;
     await FileStorageService.instance.deleteDocumentFromStorage(_doc.path);
     await DatabaseService.instance.deleteDocument(_doc.path);
-    if (_doc.id != null) {
-      await NotificationService.instance.cancelReminder(_doc.id!);
-    }
     DocumentNotifier.instance.notifyDocumentChanged();
     if (!mounted) return;
     Navigator.of(context).pop();

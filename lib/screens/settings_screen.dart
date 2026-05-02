@@ -6,16 +6,13 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../main.dart';
-import '../services/auth_service.dart';
 import '../services/file_storage_service.dart';
-import '../services/notification_service.dart';
 import '../services/onboarding_service.dart';
 import '../services/profile_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import 'about_screen.dart';
 import 'manage_family_screen.dart';
-import 'pin_setup_screen.dart';
 import 'tutorial_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -26,8 +23,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _biometricEnabled = true;
-  int _autoLockMinutes = 5;
   int _defaultReminder = 30;
   String _version = '0.1.0';
   int _storageBytes = 0;
@@ -40,15 +35,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _load() async {
     final ob = OnboardingService.instance;
-    final bio = await ob.isBiometricEnabled();
-    final lock = await ob.getAutoLockMinutes();
     final reminder = await ob.getDefaultReminderDays();
     final info = await PackageInfo.fromPlatform();
     final size = await FileStorageService.instance.getTotalStorageUsed();
     if (!mounted) return;
     setState(() {
-      _biometricEnabled = bio;
-      _autoLockMinutes = lock;
       _defaultReminder = reminder;
       _version = '${info.version}+${info.buildNumber}';
       _storageBytes = size;
@@ -73,47 +64,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
-          // ─── Security ───────────────────────────────────────────────
-          _Section(title: '🔐  Security', children: [
-            SwitchListTile(
-              title: const Text('App lock'),
-              subtitle:
-                  const Text('Require biometric or PIN to open DocShelf'),
-              value: _biometricEnabled,
-              onChanged: (v) async {
-                await OnboardingService.instance.setBiometricEnabled(v);
-                setState(() => _biometricEnabled = v);
-              },
-            ),
-            ListTile(
-              title: const Text('Change PIN'),
-              subtitle: const Text('Verify old PIN, then set a new one'),
-              leading: const Icon(Icons.password),
-              onTap: () async {
-                final hasPin = await AuthService.instance.hasPin();
-                if (!context.mounted) return;
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => PinSetupScreen(
-                      fromSettings: true,
-                      requireOldPin: hasPin,
-                    ),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              title: const Text('Auto-lock after'),
-              subtitle: Text(_autoLockMinutes < 0
-                  ? 'Never'
-                  : _autoLockMinutes == 0
-                      ? 'Immediately'
-                      : '$_autoLockMinutes minutes'),
-              leading: const Icon(Icons.timer),
-              onTap: _pickAutoLock,
-            ),
-          ]),
-
           // ─── Family ─────────────────────────────────────────────────
           _Section(title: '👨‍👩‍👧  Family', children: [
             ListTile(
@@ -144,21 +94,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // ─── Reminders ──────────────────────────────────────────────
           _Section(title: '⏰  Reminders', children: [
             ListTile(
-              leading: const Icon(Icons.notifications_active_outlined),
-              title: const Text('Default reminder'),
-              subtitle: Text('$_defaultReminder days before expiry'),
-              onTap: _pickReminder,
+              leading: const Icon(Icons.event_outlined),
+              title: const Text('How reminders work'),
+              subtitle: const Text(
+                'When you set an expiry date on a file, DocShelf adds an event to your phone calendar — your normal calendar app handles the alert.',
+              ),
+              isThreeLine: true,
             ),
             ListTile(
-              leading: const Icon(Icons.send_outlined),
-              title: const Text('Test notification'),
-              onTap: () async {
-                await NotificationService.instance.showTestNotification();
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sent test notification.')),
-                );
-              },
+              leading: const Icon(Icons.notifications_active_outlined),
+              title: const Text('Default reminder lead-time'),
+              subtitle: Text('$_defaultReminder days before expiry'),
+              onTap: _pickReminder,
             ),
           ]),
 
@@ -259,25 +206,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               leading: const Icon(Icons.share_outlined),
               title: const Text('Share with friends'),
               onTap: () => Share.share(
-                'DocShelf — every important family document in one offline vault. ${AppConstants.playStoreUrl}',
+                'DocShelf — every important document in one offline vault. ${AppConstants.playStoreUrl}',
               ),
             ),
             ListTile(
               leading: const Icon(Icons.star_outline),
               title: const Text('Rate the app'),
               onTap: () => launchUrl(Uri.parse(AppConstants.playStoreUrl)),
-            ),
-          ]),
-
-          // ─── Support ────────────────────────────────────────────────
-          _Section(title: '☕  Support', children: [
-            ListTile(
-              leading: const Text('☕', style: TextStyle(fontSize: 22)),
-              title: const Text('Buy me a chai'),
-              subtitle: const Text('Optional support — DocShelf stays free'),
-              onTap: () => launchUrl(
-                Uri.parse('upi://pay?pa=mulgundsunil@upi&pn=DocShelf'),
-              ),
             ),
           ]),
 
@@ -295,19 +230,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 Text(
-                  'Made for Indian families ❤️',
+                  'Built in India, made for the world ❤️',
                   style: GoogleFonts.nunito(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.gray,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'by Sunil',
-                  style: GoogleFonts.nunito(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
                     color: AppColors.gray,
                   ),
                 ),
@@ -317,28 +243,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
-  }
-
-  Future<void> _pickAutoLock() async {
-    final picked = await showModalBottomSheet<int>(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            _AutoLockOpt(value: 0, label: 'Immediately'),
-            _AutoLockOpt(value: 1, label: '1 minute'),
-            _AutoLockOpt(value: 5, label: '5 minutes'),
-            _AutoLockOpt(value: 15, label: '15 minutes'),
-            _AutoLockOpt(value: -1, label: 'Never'),
-          ],
-        ),
-      ),
-    );
-    if (picked != null) {
-      await OnboardingService.instance.setAutoLockMinutes(picked);
-      setState(() => _autoLockMinutes = picked);
-    }
   }
 
   Future<void> _pickReminder() async {
@@ -421,20 +325,6 @@ class _Section extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _AutoLockOpt extends StatelessWidget {
-  const _AutoLockOpt({required this.value, required this.label});
-  final int value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(label),
-      onTap: () => Navigator.of(context).pop(value),
     );
   }
 }

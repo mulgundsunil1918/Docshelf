@@ -44,10 +44,7 @@ dependencies:
   device_info_plus: ^10.1.0
 
   # ─── DocShelf-only ────────────────────────────────────────────────
-  local_auth: ^2.3.0                  # Biometric / device-credential lock
-  flutter_local_notifications: ^18.0.1 # Expiry-reminder notifications
-  timezone: ^0.9.4                    # Required by flutter_local_notifications
-  crypto: ^3.0.3                      # SHA-256 PIN hashing
+  add_2_calendar: ^3.0.1               # Hands expiry events to the system calendar app
 
 dev_dependencies:
   flutter_test:

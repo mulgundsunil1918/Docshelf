@@ -4,10 +4,10 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/document.dart';
+import '../services/calendar_service.dart';
 import '../services/category_service.dart';
 import '../services/database_service.dart';
 import '../services/document_notifier.dart';
-import '../services/notification_service.dart';
 import '../services/profile_service.dart';
 import '../utils/app_colors.dart';
 import '../widgets/document_thumbnail.dart';
@@ -221,10 +221,7 @@ class _ExpiringSoonScreenState extends State<ExpiringSoonScreen> {
                     .add(const Duration(days: 365));
                 final updated = d.copyWith(expiryDate: newDate);
                 await DatabaseService.instance.updateDocument(updated);
-                if (updated.id != null) {
-                  await NotificationService.instance
-                      .scheduleExpiryReminder(updated);
-                }
+                await CalendarService.instance.addExpiryReminder(updated);
                 DocumentNotifier.instance.notifyDocumentChanged();
                 if (sheet.mounted) Navigator.of(sheet).pop();
               },
@@ -235,10 +232,6 @@ class _ExpiringSoonScreenState extends State<ExpiringSoonScreen> {
               onTap: () async {
                 final updated = d.copyWith(clearExpiryDate: true);
                 await DatabaseService.instance.updateDocument(updated);
-                if (updated.id != null) {
-                  await NotificationService.instance
-                      .cancelReminder(updated.id!);
-                }
                 DocumentNotifier.instance.notifyDocumentChanged();
                 if (sheet.mounted) Navigator.of(sheet).pop();
               },

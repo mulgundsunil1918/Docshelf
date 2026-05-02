@@ -7,11 +7,11 @@ import 'package:provider/provider.dart';
 
 import '../models/category.dart';
 import '../models/family_member.dart';
+import '../services/calendar_service.dart';
 import '../services/category_service.dart';
 import '../services/database_service.dart';
 import '../services/document_notifier.dart';
 import '../services/file_storage_service.dart';
-import '../services/notification_service.dart';
 import '../services/onboarding_service.dart';
 import '../services/profile_service.dart';
 import '../utils/app_colors.dart';
@@ -97,7 +97,9 @@ class _SaveDocumentSheetState extends State<SaveDocumentSheet> {
       final id = await DatabaseService.instance.saveDocument(doc);
       doc = doc.copyWith(id: id);
       if (_expiry != null) {
-        await NotificationService.instance.scheduleExpiryReminder(doc);
+        // Hand off the reminder to the system calendar app — the user
+        // confirms once and it lives in their normal notification flow.
+        await CalendarService.instance.addExpiryReminder(doc);
       }
       DocumentNotifier.instance.notifyDocumentChanged();
       if (!mounted) return;

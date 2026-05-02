@@ -7,18 +7,12 @@ import 'package:provider/provider.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
 import '../models/family_member.dart';
-import '../services/auth_service.dart';
-import '../services/database_service.dart';
 import '../services/document_notifier.dart';
-import '../services/notification_service.dart';
-import '../services/onboarding_service.dart';
 import '../services/profile_service.dart';
 import '../utils/app_colors.dart';
 import '../widgets/save_document_sheet.dart';
-import 'document_viewer_screen.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
-import 'lock_screen.dart';
 import 'manage_family_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
@@ -31,31 +25,19 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
+class _MainShellState extends State<MainShell> {
   int _index = 0;
-  DateTime? _lastBackgroundedAt;
 
   StreamSubscription<List<SharedMediaFile>>? _sharingSub;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _wireSharingIntent();
-    NotificationService.instance.onNotificationTapped = _openDocFromNotification;
-  }
-
-  Future<void> _openDocFromNotification(int docId) async {
-    final doc = await DatabaseService.instance.getDocumentById(docId);
-    if (!mounted || doc == null) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => DocumentViewerScreen(doc: doc)),
-    );
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _sharingSub?.cancel();
     super.dispose();
   }
@@ -80,33 +62,6 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
         isScrollControlled: true,
         builder: (_) => SaveDocumentSheet(sourcePath: f.path),
       );
-    }
-  }
-
-  // ─── App-lifecycle (auto re-lock) ───────────────────────────────────
-  @override
-  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      _lastBackgroundedAt = DateTime.now();
-    } else if (state == AppLifecycleState.resumed &&
-        _lastBackgroundedAt != null) {
-      final mins =
-          await OnboardingService.instance.getAutoLockMinutes();
-      if (mins < 0) return; // "Never"
-      final elapsed =
-          DateTime.now().difference(_lastBackgroundedAt!).inMinutes;
-      _lastBackgroundedAt = null;
-      if (elapsed >= mins && await AuthService.instance.isLockEnabled()) {
-        if (!mounted) return;
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => LockScreen(
-              onUnlocked: () => Navigator.of(context).pop(),
-            ),
-          ),
-        );
-      }
     }
   }
 

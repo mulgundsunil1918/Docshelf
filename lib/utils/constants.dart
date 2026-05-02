@@ -28,28 +28,14 @@ class AppConstants {
   // ─── Reminders ──────────────────────────────────────────────────────
   static const int defaultReminderDays = 30;
   static const List<int> reminderDayOptions = [7, 14, 30, 60, 90];
-  static const String notificationChannelId = 'expiry_reminders';
-  static const String notificationChannelName = 'Expiry Reminders';
-  static const String notificationChannelDesc =
-      'Reminders for documents that are about to expire (passport, insurance, license, PUC, etc.)';
-
-  // ─── Lock screen ────────────────────────────────────────────────────
-  /// How long after backgrounding we re-lock the app.
-  static const Duration autoLockAfter = Duration(minutes: 5);
-  static const int maxPinAttempts = 5;
-  static const Duration pinLockoutDuration = Duration(seconds: 30);
 
   // ─── Onboarding flag keys (SharedPreferences) ───────────────────────
   static const String prefHasSeenTutorial = 'has_seen_tutorial';
   static const String prefHasCompletedFamilySetup = 'has_completed_family_setup';
   static const String prefHasSeenCoachMarks = 'has_seen_coach_marks';
-  static const String prefHasSetPin = 'has_set_pin';
-  static const String prefBiometricEnabled = 'biometric_enabled';
   static const String prefActiveMemberId = 'active_member_id';
-  static const String prefPinHash = 'pin_hash_v1';
   static const String prefThemeMode = 'theme_mode';
   static const String prefDefaultReminderDays = 'default_reminder_days';
-  static const String prefAutoLockMinutes = 'auto_lock_minutes';
 
   // ─── External links ─────────────────────────────────────────────────
   static const String supportEmail = 'mulgundsunil@gmail.com';

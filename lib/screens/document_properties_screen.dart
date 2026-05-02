@@ -9,11 +9,11 @@ import 'package:share_plus/share_plus.dart';
 import '../models/category.dart';
 import '../models/document.dart';
 import '../models/family_member.dart';
+import '../services/calendar_service.dart';
 import '../services/category_service.dart';
 import '../services/database_service.dart';
 import '../services/document_notifier.dart';
 import '../services/file_storage_service.dart';
-import '../services/notification_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../widgets/category_picker_widget.dart';
@@ -177,12 +177,10 @@ class _DocumentPropertiesScreenState extends State<DocumentPropertiesScreen> {
     );
     await DatabaseService.instance.updateDocument(updated);
     setState(() => _doc = updated);
-    if (_doc.id != null) {
-      if (newDate == null) {
-        await NotificationService.instance.cancelReminder(_doc.id!);
-      } else {
-        await NotificationService.instance.scheduleExpiryReminder(_doc);
-      }
+    if (newDate != null) {
+      // Re-prompt the system calendar so the user can replace the previous
+      // event with the updated date.
+      await CalendarService.instance.addExpiryReminder(_doc);
     }
     DocumentNotifier.instance.notifyDocumentChanged();
   }
@@ -382,9 +380,6 @@ class _DocumentPropertiesScreenState extends State<DocumentPropertiesScreen> {
     if (ok != true) return;
     await FileStorageService.instance.deleteDocumentFromStorage(_doc.path);
     await DatabaseService.instance.deleteDocument(_doc.path);
-    if (_doc.id != null) {
-      await NotificationService.instance.cancelReminder(_doc.id!);
-    }
     DocumentNotifier.instance.notifyDocumentChanged();
     if (!mounted) return;
     Navigator.of(context).pop();

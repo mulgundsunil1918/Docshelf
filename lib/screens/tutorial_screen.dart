@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../services/onboarding_service.dart';
 import '../utils/app_colors.dart';
-import 'pin_setup_screen.dart';
+import 'family_setup_screen.dart';
 
 class TutorialScreen extends StatefulWidget {
   const TutorialScreen({super.key, this.fromSettings = false});
@@ -42,9 +42,9 @@ class _TutorialScreenState extends State<TutorialScreen> {
       illustration: _IllustrationKind.family,
     ),
     _Slide(
-      headline: 'Bank-grade lock. Zero cloud. 🔐',
+      headline: 'Local-first. Zero cloud. 🛡️',
       body:
-          'Biometric + PIN. Files stay on YOUR device. No upload, no tracking, no ads. We don\'t even have your data.',
+          'Files stay on YOUR device. No accounts, no upload, no tracking, no ads. We literally don\'t have a server.',
       subtext: '',
       illustration: _IllustrationKind.shield,
     ),
@@ -63,7 +63,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
       Navigator.of(context).pop();
     } else {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const PinSetupScreen()),
+        MaterialPageRoute(builder: (_) => const FamilySetupScreen()),
       );
     }
   }

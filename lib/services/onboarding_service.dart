@@ -34,29 +34,11 @@ class OnboardingService {
   Future<void> resetCoachMarks() async =>
       (await _p()).setBool(AppConstants.prefHasSeenCoachMarks, false);
 
-  Future<bool> hasSetPin() async =>
-      (await _p()).getBool(AppConstants.prefHasSetPin) ?? false;
-  Future<void> setHasSetPin(bool value) async =>
-      (await _p()).setBool(AppConstants.prefHasSetPin, value);
-
-  Future<bool> isBiometricEnabled() async =>
-      (await _p()).getBool(AppConstants.prefBiometricEnabled) ?? true;
-  Future<void> setBiometricEnabled(bool value) async =>
-      (await _p()).setBool(AppConstants.prefBiometricEnabled, value);
-
   // ─── Active member ──────────────────────────────────────────────────
   Future<String?> getActiveMemberId() async =>
       (await _p()).getString(AppConstants.prefActiveMemberId);
   Future<void> setActiveMemberId(String id) async =>
       (await _p()).setString(AppConstants.prefActiveMemberId, id);
-
-  // ─── PIN hash ───────────────────────────────────────────────────────
-  Future<String?> getPinHash() async =>
-      (await _p()).getString(AppConstants.prefPinHash);
-  Future<void> setPinHash(String hash) async =>
-      (await _p()).setString(AppConstants.prefPinHash, hash);
-  Future<void> clearPinHash() async =>
-      (await _p()).remove(AppConstants.prefPinHash);
 
   // ─── Theme mode ─────────────────────────────────────────────────────
   /// 'system' | 'light' | 'dark'
@@ -71,11 +53,4 @@ class OnboardingService {
       AppConstants.defaultReminderDays;
   Future<void> setDefaultReminderDays(int days) async =>
       (await _p()).setInt(AppConstants.prefDefaultReminderDays, days);
-
-  // ─── Auto-lock ──────────────────────────────────────────────────────
-  /// Minutes after backgrounding to re-lock. -1 means "Never".
-  Future<int> getAutoLockMinutes() async =>
-      (await _p()).getInt(AppConstants.prefAutoLockMinutes) ?? 5;
-  Future<void> setAutoLockMinutes(int minutes) async =>
-      (await _p()).setInt(AppConstants.prefAutoLockMinutes, minutes);
 }

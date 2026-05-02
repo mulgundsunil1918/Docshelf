@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy policy · DocShelf</title>
+  <meta name="theme-color" content="#3D5AFE" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+</head>
+<body>
+
+<header class="hero" style="padding-bottom:24px;">
+  <nav class="nav">
+    <a class="brand" href="./"><span class="brand-doc">Doc</span><span class="brand-shelf">Shelf</span></a>
+    <div class="nav-links">
+      <a href="./">Home</a>
+      <a href="terms.html">Terms</a>
+      <a href="https://github.com/mulgundsunil1918/Docshelf" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </nav>
+</header>
+
+<article class="article">
+  <h1>Privacy policy</h1>
+  <p class="last-updated">Last updated: 2 May 2026</p>
+
+  <p>
+    DocShelf is a local-first document vault. This policy explains —
+    in plain English — exactly what data the app touches and where it goes.
+  </p>
+
+  <h2>The short version</h2>
+  <ul>
+    <li>DocShelf does <strong>not</strong> collect, transmit, or store your data on any server.</li>
+    <li>There are <strong>no accounts</strong>, no sign-up, no login, no tracking.</li>
+    <li>Your documents stay on your device, in <code>/storage/emulated/0/DocShelf/</code>.</li>
+    <li>We do not use analytics, ads, crash reporting, or third-party SDKs.</li>
+  </ul>
+
+  <h2>What DocShelf reads</h2>
+  <p>
+    To do its job, the app needs the following Android permissions. Each is requested
+    only when needed and used only for the documented purpose:
+  </p>
+  <ul>
+    <li><strong>Storage / MANAGE_EXTERNAL_STORAGE.</strong> So DocShelf can save your imported files into <code>/storage/emulated/0/DocShelf/</code> and read them back. Files never leave your device.</li>
+    <li><strong>Biometric / fingerprint.</strong> So the OS can verify it's you when unlocking. The biometric data is handled entirely by Android's secure subsystem; DocShelf only receives a yes/no answer.</li>
+    <li><strong>Notifications.</strong> So we can remind you when a passport / license / insurance / PUC is about to expire. Reminders are scheduled locally on your device — no push servers involved.</li>
+    <li><strong>Receive shared content.</strong> So you can long-press a file in WhatsApp, Gmail, Drive, etc. → Share → DocShelf, to import it.</li>
+  </ul>
+
+  <h2>What DocShelf stores</h2>
+  <p>
+    Two things, both on your device only:
+  </p>
+  <ul>
+    <li>The actual document files, in the <code>/DocShelf/</code> folder on your phone storage. You can browse them with any file manager.</li>
+    <li>A SQLite database (private to the app) that keeps track of names, categories, family-member ownership, expiry dates, and bookmarks.</li>
+  </ul>
+  <p>
+    Your 4-digit PIN, if set, is hashed with SHA-256 and stored in
+    Android <code>SharedPreferences</code>. The plaintext PIN is never written anywhere.
+  </p>
+
+  <h2>What DocShelf does not do</h2>
+  <ul>
+    <li>No telemetry, analytics, or usage tracking.</li>
+    <li>No advertising, profiling, or third-party SDKs.</li>
+    <li>No automatic cloud backup, sync, or upload.</li>
+    <li>No selling, sharing, or transmitting your data to anyone, ever.</li>
+  </ul>
+
+  <h2>Backups are your responsibility</h2>
+  <p>
+    Because DocShelf is local-only, if you lose your phone or factory-reset, you lose
+    your DocShelf folder. Use your usual phone backup (Google Drive backup,
+    manufacturer backup, manual file copy) to keep a copy somewhere safe.
+  </p>
+
+  <h2>Children's privacy</h2>
+  <p>
+    DocShelf is not directed at children under 13. The app does not collect
+    personal information from anyone, regardless of age.
+  </p>
+
+  <h2>Changes to this policy</h2>
+  <p>
+    If this policy ever changes, the updated version will be posted at this URL.
+    Material changes will be announced in-app via a notification.
+  </p>
+
+  <h2>Contact</h2>
+  <p>
+    Questions or concerns? Email <a href="mailto:mulgundsunil@gmail.com">mulgundsunil@gmail.com</a>.
+  </p>
+
+  <a class="back" href="./">← Back to DocShelf</a>
+</article>
+
+<footer>
+  <p>Made for Indian families ❤️ · DocShelf is open-source under the MIT license</p>
+</footer>
+
+</body>
+</html>

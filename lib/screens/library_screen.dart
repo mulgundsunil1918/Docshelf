@@ -89,7 +89,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget build(BuildContext context) {
     return Consumer3<CategoryService, ProfileService, DocumentNotifier>(
       builder: (context, cats, profile, _, __) {
-        final activeId = profile.activeMember?.id;
+        final activeId = profile.activeSpace?.id;
         final roots = cats.rootCategories;
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -115,7 +115,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           body: _grid
               ? _GridView(
                   roots: roots,
-                  activeMemberId: activeId,
+                  activeSpaceId: activeId,
                   editMode: _editMode,
                   onRename: _renameCategory,
                   onAddSub: _addSub,
@@ -145,7 +145,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 class _GridView extends StatelessWidget {
   const _GridView({
     required this.roots,
-    required this.activeMemberId,
+    required this.activeSpaceId,
     required this.editMode,
     required this.onRename,
     required this.onAddSub,
@@ -153,7 +153,7 @@ class _GridView extends StatelessWidget {
   });
 
   final List<Category> roots;
-  final String? activeMemberId;
+  final String? activeSpaceId;
   final bool editMode;
   final ValueChanged<Category> onRename;
   final ValueChanged<Category> onAddSub;
@@ -174,7 +174,7 @@ class _GridView extends StatelessWidget {
         final c = roots[i];
         return _CategoryGridCard(
           cat: c,
-          activeMemberId: activeMemberId,
+          activeSpaceId: activeSpaceId,
           editMode: editMode,
           onRename: onRename,
           onAddSub: onAddSub,
@@ -188,7 +188,7 @@ class _GridView extends StatelessWidget {
 class _CategoryGridCard extends StatelessWidget {
   const _CategoryGridCard({
     required this.cat,
-    required this.activeMemberId,
+    required this.activeSpaceId,
     required this.editMode,
     required this.onRename,
     required this.onAddSub,
@@ -196,7 +196,7 @@ class _CategoryGridCard extends StatelessWidget {
   });
 
   final Category cat;
-  final String? activeMemberId;
+  final String? activeSpaceId;
   final bool editMode;
   final ValueChanged<Category> onRename;
   final ValueChanged<Category> onAddSub;
@@ -269,7 +269,7 @@ class _CategoryGridCard extends StatelessWidget {
                 FutureBuilder<List<Document>>(
                   future: DatabaseService.instance.getDocumentsByCategories(
                     CategoryService.instance.getAllDescendantIds(cat.id),
-                    memberId: activeMemberId,
+                    spaceId: activeSpaceId,
                   ),
                   builder: (context, snap) {
                     final n = (snap.data ?? const []).length;

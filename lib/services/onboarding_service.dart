@@ -22,10 +22,10 @@ class OnboardingService {
   Future<void> resetTutorial() async =>
       (await _p()).setBool(AppConstants.prefHasSeenTutorial, false);
 
-  Future<bool> hasCompletedFamilySetup() async =>
-      (await _p()).getBool(AppConstants.prefHasCompletedFamilySetup) ?? false;
-  Future<void> markFamilySetupComplete() async =>
-      (await _p()).setBool(AppConstants.prefHasCompletedFamilySetup, true);
+  Future<bool> hasCompletedSpaceSetup() async =>
+      (await _p()).getBool(AppConstants.prefHasCompletedSpaceSetup) ?? false;
+  Future<void> markSpaceSetupComplete() async =>
+      (await _p()).setBool(AppConstants.prefHasCompletedSpaceSetup, true);
 
   Future<bool> hasSeenCoachMarks() async =>
       (await _p()).getBool(AppConstants.prefHasSeenCoachMarks) ?? false;
@@ -34,11 +34,11 @@ class OnboardingService {
   Future<void> resetCoachMarks() async =>
       (await _p()).setBool(AppConstants.prefHasSeenCoachMarks, false);
 
-  // ─── Active member ──────────────────────────────────────────────────
-  Future<String?> getActiveMemberId() async =>
-      (await _p()).getString(AppConstants.prefActiveMemberId);
-  Future<void> setActiveMemberId(String id) async =>
-      (await _p()).setString(AppConstants.prefActiveMemberId, id);
+  // ─── Active Space ───────────────────────────────────────────────────
+  Future<String?> getActiveSpaceId() async =>
+      (await _p()).getString(AppConstants.prefActiveSpaceId);
+  Future<void> setActiveSpaceId(String id) async =>
+      (await _p()).setString(AppConstants.prefActiveSpaceId, id);
 
   // ─── Theme mode ─────────────────────────────────────────────────────
   /// 'system' | 'light' | 'dark'

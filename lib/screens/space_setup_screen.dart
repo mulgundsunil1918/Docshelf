@@ -1,41 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../models/family_member.dart';
+import '../models/space.dart';
 import '../services/onboarding_service.dart';
 import '../services/profile_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import 'main_shell.dart';
 
-class FamilySetupScreen extends StatefulWidget {
-  const FamilySetupScreen({super.key});
+class SpaceSetupScreen extends StatefulWidget {
+  const SpaceSetupScreen({super.key});
 
   @override
-  State<FamilySetupScreen> createState() => _FamilySetupScreenState();
+  State<SpaceSetupScreen> createState() => _SpaceSetupScreenState();
 }
 
-class _FamilySetupScreenState extends State<FamilySetupScreen> {
-  final List<_DraftMember> _drafts = [
-    _DraftMember(
-      id: AppConstants.selfMemberId,
-      relation: FamilyRelation.self,
-      avatar: '👨',
-      isSelfRow: true,
+class _SpaceSetupScreenState extends State<SpaceSetupScreen> {
+  final List<_DraftSpace> _drafts = [
+    _DraftSpace(
+      id: AppConstants.selfSpaceId,
+      type: SpaceType.personal,
+      avatar: '👤',
+      isFirst: true,
     ),
   ];
 
-  bool get _canContinue =>
-      _drafts.first.name.trim().isNotEmpty;
+  bool get _canContinue => _drafts.first.name.trim().isNotEmpty;
 
   void _addRow() {
     if (_drafts.length >= 7) return;
     setState(() {
       _drafts.add(
-        _DraftMember(
-          id: 'member_${DateTime.now().millisecondsSinceEpoch}',
-          relation: FamilyRelation.spouse,
-          avatar: '👩',
+        _DraftSpace(
+          id: 'space_${DateTime.now().millisecondsSinceEpoch}',
+          type: SpaceType.work,
+          avatar: '💼',
         ),
       );
     });
@@ -49,18 +48,16 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   Future<void> _save() async {
     final profiles = ProfileService.instance;
     for (final d in _drafts) {
-      final m = FamilyMember(
+      final s = Space(
         id: d.id,
-        name: d.name.trim().isEmpty
-            ? d.relation.label
-            : d.name.trim(),
-        relation: d.relation,
+        name: d.name.trim().isEmpty ? d.type.label : d.name.trim(),
+        type: d.type,
         avatar: d.avatar,
       );
-      await profiles.addMember(m);
+      await profiles.addSpace(s);
     }
-    await profiles.setActiveMember(_drafts.first.id);
-    await OnboardingService.instance.markFamilySetupComplete();
+    await profiles.setActiveSpace(_drafts.first.id);
+    await OnboardingService.instance.markSpaceSetupComplete();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const MainShell()),
@@ -72,7 +69,7 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
     return Scaffold(
       backgroundColor: AppColors.light,
       appBar: AppBar(
-        title: const Text("Who's in your family?"),
+        title: const Text('Set up your Spaces'),
         elevation: 0,
         backgroundColor: AppColors.light,
       ),
@@ -82,7 +79,9 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: Text(
-                'Add yourself first. You can add spouse, kids, parents anytime from Settings.',
+                'A Space is a top-level context — yourself, a family member, '
+                'work, a side project, a class you teach. Add yourself first; '
+                'add more anytime from Settings.',
                 style: GoogleFonts.nunito(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -102,7 +101,7 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
                       onTap: _addRow,
                     );
                   }
-                  return _MemberRow(
+                  return _SpaceRow(
                     draft: _drafts[idx],
                     isFirst: idx == 0,
                     onRemove: () => _removeRow(idx),
@@ -131,30 +130,30 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   }
 }
 
-class _DraftMember {
-  _DraftMember({
+class _DraftSpace {
+  _DraftSpace({
     required this.id,
-    required this.relation,
+    required this.type,
     required this.avatar,
-    this.isSelfRow = false,
+    this.isFirst = false,
   });
 
   final String id;
   String name = '';
-  FamilyRelation relation;
+  SpaceType type;
   String avatar;
-  final bool isSelfRow;
+  final bool isFirst;
 }
 
-class _MemberRow extends StatelessWidget {
-  const _MemberRow({
+class _SpaceRow extends StatelessWidget {
+  const _SpaceRow({
     required this.draft,
     required this.isFirst,
     required this.onRemove,
     required this.onChanged,
   });
 
-  final _DraftMember draft;
+  final _DraftSpace draft;
   final bool isFirst;
   final VoidCallback onRemove;
   final VoidCallback onChanged;
@@ -168,115 +167,83 @@ class _MemberRow extends StatelessWidget {
         border: Border.all(color: AppColors.gray.withValues(alpha: 0.15)),
       ),
       padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () async {
-                  final picked = await showModalBottomSheet<String>(
-                    context: context,
-                    builder: (_) => _AvatarPicker(current: draft.avatar),
-                  );
-                  if (picked != null) {
-                    draft.avatar = picked;
+          GestureDetector(
+            onTap: () async {
+              final picked = await showModalBottomSheet<String>(
+                context: context,
+                builder: (_) => _AvatarPicker(current: draft.avatar),
+              );
+              if (picked != null) {
+                draft.avatar = picked;
+                onChanged();
+              }
+            },
+            child: Container(
+              width: 56,
+              height: 56,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.10),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.4),
+                  width: 2,
+                ),
+              ),
+              child: Text(draft.avatar, style: const TextStyle(fontSize: 28)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: TextEditingController(text: draft.name)
+                    ..selection =
+                        TextSelection.collapsed(offset: draft.name.length),
+                  onChanged: (v) {
+                    draft.name = v;
                     onChanged();
-                  }
-                },
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.10),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.4),
-                      width: 2,
+                  },
+                  decoration: InputDecoration(
+                    hintText: isFirst
+                        ? 'Your name (e.g. Sunil, or "Personal")'
+                        : 'Space name (e.g. Wife, Work, Class 8-A)',
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
                     ),
                   ),
-                  child: Text(draft.avatar,
-                      style: const TextStyle(fontSize: 28)),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      controller: TextEditingController(text: draft.name)
-                        ..selection = TextSelection.collapsed(
-                            offset: draft.name.length),
-                      onChanged: (v) {
-                        draft.name = v;
-                        onChanged();
-                      },
-                      decoration: InputDecoration(
-                        hintText: isFirst
-                            ? 'Your name (e.g. Sunil)'
-                            : '${draft.relation.label} name',
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (!isFirst)
-                      DropdownButton<FamilyRelation>(
-                        value: draft.relation,
-                        underline: const SizedBox.shrink(),
-                        items: FamilyRelation.values
-                            .where((r) => r != FamilyRelation.self)
-                            .map(
-                              (r) => DropdownMenuItem(
-                                value: r,
-                                child: Text(r.label),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (r) {
-                          if (r != null) {
-                            draft.relation = r;
-                            onChanged();
-                          }
-                        },
-                      )
-                    else
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color:
-                                AppColors.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'Self · required',
-                            style: GoogleFonts.nunito(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primary,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
+                const SizedBox(height: 8),
+                DropdownButton<SpaceType>(
+                  value: draft.type,
+                  underline: const SizedBox.shrink(),
+                  items: SpaceType.values
+                      .map((r) => DropdownMenuItem(
+                            value: r,
+                            child: Text(r.label),
+                          ))
+                      .toList(),
+                  onChanged: (r) {
+                    if (r != null) {
+                      draft.type = r;
+                      onChanged();
+                    }
+                  },
                 ),
-              ),
-              if (!isFirst)
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  color: AppColors.danger,
-                  onPressed: onRemove,
-                ),
-            ],
+              ],
+            ),
           ),
+          if (!isFirst)
+            IconButton(
+              icon: const Icon(Icons.close),
+              color: AppColors.danger,
+              onPressed: onRemove,
+            ),
         ],
       ),
     );
@@ -305,20 +272,17 @@ class _AddRowButton extends StatelessWidget {
             color: enabled
                 ? AppColors.primary.withValues(alpha: 0.4)
                 : AppColors.gray.withValues(alpha: 0.3),
-            style: BorderStyle.solid,
           ),
         ),
         child: Row(
           children: [
-            Icon(
-              Icons.add,
-              color: enabled ? AppColors.primary : AppColors.gray,
-            ),
+            Icon(Icons.add,
+                color: enabled ? AppColors.primary : AppColors.gray),
             const SizedBox(width: 8),
             Text(
               enabled
-                  ? 'Add another family member'
-                  : 'Maximum 7 members during setup',
+                  ? 'Add another Space'
+                  : 'Maximum 7 Spaces during setup',
               style: GoogleFonts.nunito(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
@@ -376,8 +340,7 @@ class _AvatarPicker extends StatelessWidget {
                           width: 2,
                         ),
                       ),
-                      child:
-                          Text(a, style: const TextStyle(fontSize: 26)),
+                      child: Text(a, style: const TextStyle(fontSize: 26)),
                     ),
                   ),
               ],

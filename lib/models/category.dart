@@ -15,7 +15,7 @@ class Category {
     this.depth = 0,
     this.children = const [],
     this.isCustom = false,
-    this.ownerMemberId,
+    this.ownerSpaceId,
   });
 
   final String id;
@@ -26,9 +26,9 @@ class Category {
   final List<Category> children;
   final bool isCustom;
 
-  /// Null = shared across every family member (default for built-ins).
-  /// Non-null = visible only to that member.
-  final String? ownerMemberId;
+  /// Null = shared across every Space (default for built-ins).
+  /// Non-null = visible only inside that Space.
+  final String? ownerSpaceId;
 
   bool get hasChildren => children.isNotEmpty;
   bool get isRoot => parentId == null;
@@ -41,8 +41,8 @@ class Category {
     int? depth,
     List<Category>? children,
     bool? isCustom,
-    String? ownerMemberId,
-    bool clearOwnerMemberId = false,
+    String? ownerSpaceId,
+    bool clearOwnerSpaceId = false,
   }) {
     return Category(
       id: id ?? this.id,
@@ -52,18 +52,17 @@ class Category {
       depth: depth ?? this.depth,
       children: children ?? this.children,
       isCustom: isCustom ?? this.isCustom,
-      ownerMemberId:
-          clearOwnerMemberId ? null : (ownerMemberId ?? this.ownerMemberId),
+      ownerSpaceId:
+          clearOwnerSpaceId ? null : (ownerSpaceId ?? this.ownerSpaceId),
     );
   }
 
-  // ─── Serialization (custom only) ────────────────────────────────────
   Map<String, dynamic> toMap() => {
         'id': id,
         'name': name,
         'parentId': parentId,
         'emoji': emoji,
-        'ownerMemberId': ownerMemberId,
+        'ownerSpaceId': ownerSpaceId,
       };
 
   factory Category.fromMap(Map<String, dynamic> map, {int depth = 0}) {
@@ -74,7 +73,7 @@ class Category {
       parentId: map['parentId'] as String?,
       depth: depth,
       isCustom: true,
-      ownerMemberId: map['ownerMemberId'] as String?,
+      ownerSpaceId: map['ownerSpaceId'] as String?,
     );
   }
 
@@ -88,5 +87,5 @@ class Category {
   @override
   String toString() =>
       'Category(id: $id, name: $name, parent: $parentId, depth: $depth, '
-      'custom: $isCustom, owner: $ownerMemberId)';
+      'custom: $isCustom, owner: $ownerSpaceId)';
 }

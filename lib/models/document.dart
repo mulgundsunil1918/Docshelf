@@ -35,7 +35,7 @@ class Document {
     required this.name,
     required this.path,
     required this.categoryId,
-    required this.familyMemberId,
+    required this.spaceId,
     required this.fileType,
     required this.sizeBytes,
     required this.savedAt,
@@ -50,7 +50,7 @@ class Document {
   final String name;
   final String path;
   final String categoryId;
-  final String familyMemberId;
+  final String spaceId;
   final DocFileType fileType;
   final int sizeBytes;
   final DateTime savedAt;
@@ -165,13 +165,12 @@ class Document {
     }
   }
 
-  // ─── Mutability helper ──────────────────────────────────────────────
   Document copyWith({
     int? id,
     String? name,
     String? path,
     String? categoryId,
-    String? familyMemberId,
+    String? spaceId,
     DocFileType? fileType,
     int? sizeBytes,
     DateTime? savedAt,
@@ -187,7 +186,7 @@ class Document {
       name: name ?? this.name,
       path: path ?? this.path,
       categoryId: categoryId ?? this.categoryId,
-      familyMemberId: familyMemberId ?? this.familyMemberId,
+      spaceId: spaceId ?? this.spaceId,
       fileType: fileType ?? this.fileType,
       sizeBytes: sizeBytes ?? this.sizeBytes,
       savedAt: savedAt ?? this.savedAt,
@@ -199,13 +198,12 @@ class Document {
     );
   }
 
-  // ─── Serialization ──────────────────────────────────────────────────
   Map<String, dynamic> toMap() => {
         'id': id,
         'name': name,
         'path': path,
         'categoryId': categoryId,
-        'familyMemberId': familyMemberId,
+        'spaceId': spaceId,
         'fileType': fileType.storageKey,
         'sizeBytes': sizeBytes,
         'savedAt': savedAt.millisecondsSinceEpoch,
@@ -222,7 +220,7 @@ class Document {
       name: map['name'] as String? ?? '',
       path: map['path'] as String? ?? '',
       categoryId: map['categoryId'] as String? ?? '',
-      familyMemberId: map['familyMemberId'] as String? ?? '',
+      spaceId: map['spaceId'] as String? ?? '',
       fileType: DocFileType.fromKey(map['fileType'] as String?),
       sizeBytes: (map['sizeBytes'] as int?) ?? 0,
       savedAt: DateTime.fromMillisecondsSinceEpoch(
@@ -247,6 +245,6 @@ class Document {
 
   @override
   String toString() =>
-      'Document(id: $id, name: $name, path: $path, member: $familyMemberId, '
+      'Document(id: $id, name: $name, path: $path, space: $spaceId, '
       'cat: $categoryId, type: ${fileType.name})';
 }

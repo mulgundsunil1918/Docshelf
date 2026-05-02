@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../services/onboarding_service.dart';
 import '../utils/app_colors.dart';
-import 'family_setup_screen.dart';
+import 'space_setup_screen.dart';
 
 class TutorialScreen extends StatefulWidget {
   const TutorialScreen({super.key, this.fromSettings = false});
@@ -21,23 +21,23 @@ class _TutorialScreenState extends State<TutorialScreen> {
 
   static const _slides = [
     _Slide(
-      headline: "Where's your Aadhaar copy? 😅",
+      headline: "Where's that contract / passport / homework / quote? 😅",
       body:
-          'Scattered across WhatsApp chats, Gmail, Drive, random folders. Always missing when you need it most.',
+          'Documents scattered across WhatsApp chats, Gmail, Drive, random folders. Always missing when you need them.',
       subtext: 'DocShelf fixes that — forever.',
       illustration: _IllustrationKind.messy,
     ),
     _Slide(
       headline: 'One vault. Every document. 🗂️',
       body:
-          'Identity, Finance, Health, Property, Vehicle, Education — organized the way Indian families actually need it.',
-      subtext: 'Works with PDFs, images, scans, photos.',
+          'Identity, Finance, Work, Education, Health, Property, Quotes, Receipts — 14 starter folders that cover personal, professional, academic. Add your own anytime.',
+      subtext: 'Works with PDFs, images, scans, notes, anything.',
       illustration: _IllustrationKind.categories,
     ),
     _Slide(
-      headline: 'For your whole family 👨‍👩‍👧',
+      headline: 'Spaces for any context 🪐',
       body:
-          'Self, spouse, kids, parents — separate document trees per person. Tap any avatar to switch profiles instantly.',
+          'Personal, family, work, side project, a class you teach — keep them separate. Each Space has its own folder tree. Switch with one tap.',
       subtext: 'All offline. All on your device.',
       illustration: _IllustrationKind.family,
     ),
@@ -63,7 +63,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
       Navigator.of(context).pop();
     } else {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const FamilySetupScreen()),
+        MaterialPageRoute(builder: (_) => const SpaceSetupScreen()),
       );
     }
   }
@@ -364,10 +364,10 @@ class _FamilyIllustration extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ppl = [
-      ('👨', 'Self'),
-      ('👩', 'Wife'),
-      ('👦', 'Son'),
-      ('👴', 'Dad'),
+      ('👤', 'Personal'),
+      ('💼', 'Work'),
+      ('🎓', 'Studies'),
+      ('🚀', 'Project'),
     ];
     return Wrap(
       alignment: WrapAlignment.center,

@@ -7,14 +7,14 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import '../models/category.dart';
-import '../models/family_member.dart';
+import '../models/space.dart';
 import '../services/category_service.dart';
 import '../services/database_service.dart';
 import '../services/document_notifier.dart';
 import '../services/file_storage_service.dart';
 import '../services/profile_service.dart';
 import '../widgets/category_picker_widget.dart';
-import '../widgets/family_picker_widget.dart';
+import '../widgets/space_picker_widget.dart';
 
 class BatchImportScreen extends StatefulWidget {
   const BatchImportScreen({super.key});
@@ -26,14 +26,14 @@ class BatchImportScreen extends StatefulWidget {
 class _BatchImportScreenState extends State<BatchImportScreen> {
   final _files = <_PendingFile>[];
   Category? _category;
-  FamilyMember? _member;
+  Space? _space;
   bool _importing = false;
   double _progress = 0;
 
   @override
   void initState() {
     super.initState();
-    _member = ProfileService.instance.activeMember;
+    _space = ProfileService.instance.activeSpace;
   }
 
   Future<void> _pickFiles() async {
@@ -67,7 +67,7 @@ class _BatchImportScreenState extends State<BatchImportScreen> {
   }
 
   Future<void> _import() async {
-    if (_member == null || _category == null) return;
+    if (_space == null || _category == null) return;
     final selected = _files.where((f) => f.selected).toList();
     if (selected.isEmpty) return;
     setState(() {
@@ -80,7 +80,7 @@ class _BatchImportScreenState extends State<BatchImportScreen> {
         var doc = await FileStorageService.instance.storeDocument(
           sourcePath: f.path,
           categoryId: _category!.id,
-          member: _member!,
+          space: _space!,
         );
         final id = await DatabaseService.instance.saveDocument(doc);
         doc = doc.copyWith(id: id);
@@ -149,9 +149,9 @@ class _BatchImportScreenState extends State<BatchImportScreen> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: FamilyPickerWidget(
-              selectedId: _member?.id,
-              onChanged: (m) => setState(() => _member = m),
+            child: SpacePickerWidget(
+              selectedId: _space?.id,
+              onChanged: (s) => setState(() => _space = s),
             ),
           ),
           Padding(
@@ -234,7 +234,7 @@ class _BatchImportScreenState extends State<BatchImportScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: (_member != null &&
+                  onPressed: (_space != null &&
                           _category != null &&
                           selected > 0 &&
                           !_importing)

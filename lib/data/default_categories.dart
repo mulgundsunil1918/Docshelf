@@ -17,11 +17,16 @@ Category _sub(String id, String name, String emoji) {
   return Category(id: id, name: name, emoji: emoji);
 }
 
-// ─── 11 default roots + their subcategories ──────────────────────────
+// ─── 14 default roots + their subcategories ──────────────────────────
 /// The starter category tree shipped with DocShelf.
 ///
-/// All ids are stable strings (`cat_<root>` or `cat_<root>_<sub>`) so they
-/// can survive schema migrations without renames. Add custom subcategories
+/// Designed to cover universal use cases — personal, professional,
+/// academic. Indian-specific defaults (Aadhaar, PAN, ITR, RC, PUC) live
+/// alongside global ones (NDAs, homework, quotations) — users can ignore
+/// what they don't need and add their own.
+///
+/// All ids are stable strings (`cat_<root>` or `cat_<root>_<sub>`) so
+/// they survive schema migrations without renames. Add custom subcategories
 /// at runtime via `CategoryService` — they get `custom_<timestamp>` ids.
 final List<Category> kDefaultCategories = [
   _root('cat_identity', 'Identity', '🪪', [
@@ -30,58 +35,101 @@ final List<Category> kDefaultCategories = [
     _sub('cat_identity_passport', 'Passport', '📘'),
     _sub('cat_identity_voter', 'Voter ID', '🗳️'),
     _sub('cat_identity_dl', 'Driving License', '🚙'),
+    _sub('cat_identity_ssn', 'SSN / National ID', '🆔'),
   ]),
   _root('cat_finance', 'Finance', '💰', [
     _sub('cat_finance_bank', 'Bank Statements', '🏦'),
-    _sub('cat_finance_itr', 'ITR & Tax', '🧾'),
+    _sub('cat_finance_itr', 'Tax Returns / ITR', '🧾'),
     _sub('cat_finance_mf', 'Mutual Funds', '📈'),
     _sub('cat_finance_loans', 'Loans', '💳'),
-    _sub('cat_finance_demat', 'Demat & Stocks', '📊'),
+    _sub('cat_finance_demat', 'Stocks & Demat', '📊'),
+    _sub('cat_finance_cards', 'Credit Cards', '💳'),
+  ]),
+  _root('cat_work', 'Work', '💼', [
+    _sub('cat_work_offer', 'Offer Letters', '📨'),
+    _sub('cat_work_payslips', 'Payslips', '💵'),
+    _sub('cat_work_contracts', 'Contracts', '📝'),
+    _sub('cat_work_nda', 'NDAs & Agreements', '🔒'),
+    _sub('cat_work_resume', 'Resume & CV', '📄'),
+    _sub('cat_work_reviews', 'Performance Reviews', '⭐'),
+    _sub('cat_work_licenses', 'Software Licenses', '🔑'),
+    _sub('cat_work_minutes', 'Meeting Minutes', '🗒️'),
+    _sub('cat_work_briefs', 'Project Briefs', '📋'),
+    _sub('cat_work_invoices', 'Invoices', '🧾'),
+  ]),
+  _root('cat_education', 'Education', '🎓', [
+    _sub('cat_education_marks', 'Marksheets', '📑'),
+    _sub('cat_education_certs', 'Certificates', '🏆'),
+    _sub('cat_education_degrees', 'Degrees', '🎓'),
+    _sub('cat_education_homework', 'Homework / Assignments', '✏️'),
+    _sub('cat_education_lectures', 'Lecture Notes', '📓'),
+    _sub('cat_education_projects', 'Project Reports', '📊'),
+    _sub('cat_education_syllabi', 'Syllabi', '📚'),
+    _sub('cat_education_lessonplans', 'Lesson Plans', '🧑‍🏫'),
+    _sub('cat_education_students', 'Student Records', '👨‍🎓'),
   ]),
   _root('cat_health', 'Health', '🏥', [
     _sub('cat_health_rx', 'Prescriptions', '💊'),
     _sub('cat_health_lab', 'Lab Reports', '🧪'),
     _sub('cat_health_bills', 'Hospital Bills', '🏥'),
     _sub('cat_health_insurance', 'Health Insurance', '🛡️'),
+    _sub('cat_health_vaccinations', 'Vaccinations', '💉'),
+  ]),
+  _root('cat_insurance', 'Insurance & Policies', '🛡️', [
+    _sub('cat_insurance_life', 'Life Insurance', '❤️'),
+    _sub('cat_insurance_term', 'Term Insurance', '📜'),
+    _sub('cat_insurance_health', 'Health Insurance', '🏥'),
+    _sub('cat_insurance_motor', 'Motor Insurance', '🚗'),
+    _sub('cat_insurance_home', 'Home Insurance', '🏠'),
+    _sub('cat_insurance_travel', 'Travel Insurance', '✈️'),
+    _sub('cat_insurance_other', 'Other Policies', '🛡️'),
   ]),
   _root('cat_property', 'Property', '🏠', [
     _sub('cat_property_sale', 'Sale Deed', '🏘️'),
-    _sub('cat_property_rent', 'Rent Agreement', '🏠'),
+    _sub('cat_property_rent', 'Rent / Lease Agreement', '🏠'),
     _sub('cat_property_tax', 'Property Tax', '🧾'),
     _sub('cat_property_will', 'Will & Nominations', '📜'),
+    _sub('cat_property_utility', 'Utility Setup', '🔌'),
   ]),
   _root('cat_vehicle', 'Vehicle', '🚗', [
-    _sub('cat_vehicle_rc', 'RC Book', '🚗'),
+    _sub('cat_vehicle_rc', 'RC / Registration', '🚗'),
     _sub('cat_vehicle_insurance', 'Insurance', '🛡️'),
-    _sub('cat_vehicle_puc', 'PUC', '🌿'),
+    _sub('cat_vehicle_puc', 'Pollution / Emissions', '🌿'),
     _sub('cat_vehicle_license', 'Driving License', '🪪'),
+    _sub('cat_vehicle_service', 'Service Records', '🔧'),
   ]),
-  _root('cat_education', 'Education', '🎓', [
-    _sub('cat_education_marks', 'Marksheets', '📑'),
-    _sub('cat_education_certs', 'Certificates', '🏆'),
-    _sub('cat_education_degrees', 'Degrees', '🎓'),
-  ]),
-  _root('cat_work', 'Work', '💼', [
-    _sub('cat_work_offer', 'Offer Letters', '📨'),
-    _sub('cat_work_payslips', 'Payslips', '💵'),
-    _sub('cat_work_contracts', 'Contracts', '📝'),
-    _sub('cat_work_resume', 'Resume & CV', '📄'),
-  ]),
-  _root('cat_bills', 'Bills', '🧾', [
+  _root('cat_bills', 'Bills & Utilities', '🧾', [
     _sub('cat_bills_electricity', 'Electricity', '⚡'),
     _sub('cat_bills_water', 'Water', '💧'),
+    _sub('cat_bills_gas', 'Gas / LPG', '🔥'),
     _sub('cat_bills_internet', 'Internet', '🌐'),
-    _sub('cat_bills_mobile', 'Mobile', '📱'),
+    _sub('cat_bills_mobile', 'Mobile / Phone', '📱'),
+    _sub('cat_bills_subscriptions', 'Subscriptions', '🔁'),
+  ]),
+  _root('cat_receipts', 'Receipts & Warranties', '🛒', [
+    _sub('cat_receipts_purchase', 'Purchase Receipts', '🧾'),
+    _sub('cat_receipts_warranty', 'Warranty Cards', '✅'),
+    _sub('cat_receipts_manuals', 'Manuals & Guides', '📖'),
+    _sub('cat_receipts_returns', 'Returns & Exchanges', '↩️'),
+  ]),
+  _root('cat_quotations', 'Quotations & Estimates', '💬', [
+    _sub('cat_quotations_vehicle', 'Vehicle / Car Quotes', '🚗'),
+    _sub('cat_quotations_home', 'Home Renovation', '🏗️'),
+    _sub('cat_quotations_repairs', 'Repair Estimates', '🔧'),
+    _sub('cat_quotations_vendors', 'Vendor Quotes', '🏷️'),
+    _sub('cat_quotations_freelance', 'Freelance Proposals', '💼'),
   ]),
   _root('cat_travel', 'Travel', '✈️', [
     _sub('cat_travel_tickets', 'Tickets', '🎟️'),
     _sub('cat_travel_visas', 'Visas', '🛂'),
-    _sub('cat_travel_bookings', 'Bookings', '🏨'),
+    _sub('cat_travel_bookings', 'Hotel Bookings', '🏨'),
+    _sub('cat_travel_itinerary', 'Itineraries', '🗺️'),
   ]),
   _root('cat_family', 'Family', '👨‍👩‍👧', [
     _sub('cat_family_birth', 'Birth Certificates', '👶'),
     _sub('cat_family_marriage', 'Marriage Certificate', '💍'),
     _sub('cat_family_photos', 'Family Photos', '📸'),
+    _sub('cat_family_legal', 'Legal Documents', '⚖️'),
   ]),
   _root('cat_other', 'Other / Unsorted', '📦', const []),
 ];

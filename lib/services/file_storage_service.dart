@@ -4,12 +4,12 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/document.dart';
-import '../models/family_member.dart';
+import '../models/space.dart';
 import '../utils/constants.dart';
 import 'database_service.dart';
 
 /// Manages the on-disk DocShelf vault under
-/// `/storage/emulated/0/DocShelf/<MemberSafeName>/<Cat1>/<Cat2>/...`.
+/// `/storage/emulated/0/DocShelf/<SpaceName>/<Cat1>/<Cat2>/...`.
 class FileStorageService {
   static final FileStorageService instance = FileStorageService._();
   FileStorageService._();
@@ -42,23 +42,23 @@ class FileStorageService {
     return DatabaseService.instance.getCategoryPathNames(categoryId);
   }
 
-  Future<String> _memberSegment(FamilyMember? member) async {
-    if (member == null) return '';
-    return sanitizeName(member.safeName);
+  Future<String> _spaceSegment(Space? space) async {
+    if (space == null) return '';
+    return sanitizeName(space.safeName);
   }
 
-  /// Builds an absolute folder path for the given category + member.
+  /// Builds an absolute folder path for the given category + space.
   Future<String> ensureCategoryDir({
     required String categoryId,
-    FamilyMember? member,
+    Space? space,
   }) async {
     final root = await rootDir;
-    final memberSeg = await _memberSegment(member);
+    final spaceSeg = await _spaceSegment(space);
     final segs = await _categoryPathSegments(categoryId);
     final cleaned = segs.map(sanitizeName).toList();
-    final full = memberSeg.isEmpty
+    final full = spaceSeg.isEmpty
         ? p.joinAll([root, ...cleaned])
-        : p.joinAll([root, memberSeg, ...cleaned]);
+        : p.joinAll([root, spaceSeg, ...cleaned]);
     final dir = Directory(full);
     if (!dir.existsSync()) dir.createSync(recursive: true);
     return full;
@@ -68,7 +68,7 @@ class FileStorageService {
   Future<Document> storeDocument({
     required String sourcePath,
     required String categoryId,
-    required FamilyMember member,
+    required Space space,
     String? customName,
     DateTime? expiryDate,
     int reminderDays = 30,
@@ -83,7 +83,7 @@ class FileStorageService {
         ? customName!.trim()
         : p.basename(sourcePath);
     final name = sanitizeName(originalName);
-    final dir = await ensureCategoryDir(categoryId: categoryId, member: member);
+    final dir = await ensureCategoryDir(categoryId: categoryId, space: space);
     final destPath = _uniqueDest(p.join(dir, name));
     final dest = await src.copy(destPath);
     final size = dest.lengthSync();
@@ -92,7 +92,7 @@ class FileStorageService {
       name: p.basenameWithoutExtension(destPath),
       path: dest.path,
       categoryId: categoryId,
-      familyMemberId: member.id,
+      spaceId: space.id,
       fileType: Document.typeFromExtension(ext),
       sizeBytes: size,
       savedAt: DateTime.now(),
@@ -107,9 +107,9 @@ class FileStorageService {
     required String title,
     required String content,
     required String categoryId,
-    required FamilyMember member,
+    required Space space,
   }) async {
-    final dir = await ensureCategoryDir(categoryId: categoryId, member: member);
+    final dir = await ensureCategoryDir(categoryId: categoryId, space: space);
     final fileName = '${sanitizeName(title.isEmpty ? 'Untitled note' : title)}.txt';
     final destPath = _uniqueDest(p.join(dir, fileName));
     final f = await File(destPath).writeAsString(content);
@@ -118,7 +118,7 @@ class FileStorageService {
       name: p.basenameWithoutExtension(destPath),
       path: f.path,
       categoryId: categoryId,
-      familyMemberId: member.id,
+      spaceId: space.id,
       fileType: DocFileType.note,
       sizeBytes: size,
       savedAt: DateTime.now(),
@@ -129,11 +129,11 @@ class FileStorageService {
   Future<Document> moveDocument(
     Document doc, {
     required String newCategoryId,
-    FamilyMember? newMember,
+    Space? newSpace,
   }) async {
     final destDir = await ensureCategoryDir(
       categoryId: newCategoryId,
-      member: newMember,
+      space: newSpace,
     );
     final fileName = p.basename(doc.path);
     final destPath = _uniqueDest(p.join(destDir, fileName));
@@ -142,7 +142,6 @@ class FileStorageService {
       throw FileSystemException('File missing', doc.path);
     }
     final moved = await src.rename(destPath).catchError((_) async {
-      // rename can fail across volumes — fall back to copy + delete.
       final copied = await src.copy(destPath);
       await src.delete();
       return copied;
@@ -150,7 +149,7 @@ class FileStorageService {
     return doc.copyWith(
       path: moved.path,
       categoryId: newCategoryId,
-      familyMemberId: newMember?.id ?? doc.familyMemberId,
+      spaceId: newSpace?.id ?? doc.spaceId,
     );
   }
 
@@ -167,16 +166,16 @@ class FileStorageService {
 
   Future<void> deleteCategoryDir({
     required String categoryId,
-    FamilyMember? member,
+    Space? space,
   }) async {
     final root = await rootDir;
-    final memberSeg = await _memberSegment(member);
+    final spaceSeg = await _spaceSegment(space);
     final segs = await _categoryPathSegments(categoryId);
     if (segs.isEmpty) return;
     final cleaned = segs.map(sanitizeName).toList();
-    final full = memberSeg.isEmpty
+    final full = spaceSeg.isEmpty
         ? p.joinAll([root, ...cleaned])
-        : p.joinAll([root, memberSeg, ...cleaned]);
+        : p.joinAll([root, spaceSeg, ...cleaned]);
     final dir = Directory(full);
     if (dir.existsSync()) {
       try {

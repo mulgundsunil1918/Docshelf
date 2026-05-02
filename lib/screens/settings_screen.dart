@@ -12,7 +12,7 @@ import '../services/profile_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import 'about_screen.dart';
-import 'manage_family_screen.dart';
+import 'manage_spaces_screen.dart';
 import 'tutorial_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -58,34 +58,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeNotifier>();
-    final activeMember = context.watch<ProfileService>().activeMember;
+    final activeSpace = context.watch<ProfileService>().activeSpace;
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
-          // ─── Family ─────────────────────────────────────────────────
-          _Section(title: '👨‍👩‍👧  Family', children: [
+          // ─── Spaces ─────────────────────────────────────────────────
+          _Section(title: '🪐  Spaces', children: [
             ListTile(
               leading: CircleAvatar(
                 backgroundColor: AppColors.primary.withValues(alpha: 0.16),
-                child: Text(activeMember?.avatar ?? '👤',
+                child: Text(activeSpace?.avatar ?? '👤',
                     style: const TextStyle(fontSize: 22)),
               ),
-              title: Text(activeMember?.name ?? '—'),
-              subtitle: Text(activeMember?.relation.label ?? 'Active member'),
+              title: Text(activeSpace?.name ?? '—'),
+              subtitle: Text(activeSpace?.type.label ?? 'Active Space'),
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ManageFamilyScreen()),
+                  MaterialPageRoute(builder: (_) => const ManageSpacesScreen()),
                 );
               },
             ),
             ListTile(
-              leading: const Icon(Icons.group_outlined),
-              title: const Text('Manage family members'),
+              leading: const Icon(Icons.workspaces_outline),
+              title: const Text('Manage Spaces'),
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ManageFamilyScreen()),
+                  MaterialPageRoute(builder: (_) => const ManageSpacesScreen()),
                 );
               },
             ),

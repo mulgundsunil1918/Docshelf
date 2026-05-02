@@ -399,3 +399,57 @@ footer {
   font-weight: 800;
   font-size: 13px;
 }
+
+/* ─── "Who's it for" section ─────────────────────────────────────── */
+.who {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 56px 24px 24px;
+  text-align: center;
+}
+
+.who h2 {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+
+.who-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+  margin-top: 32px;
+}
+
+.who-card {
+  background: var(--white);
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 18px;
+  padding: 26px 20px;
+  text-align: left;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.who-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px -18px rgba(61,90,254,0.32);
+}
+
+.who-icon {
+  font-size: 34px;
+  margin-bottom: 10px;
+}
+
+.who-card h3 {
+  font-size: 17px;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.who-card p {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray);
+  line-height: 1.55;
+}

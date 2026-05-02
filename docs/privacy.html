@@ -48,9 +48,8 @@
   </p>
   <ul>
     <li><strong>Storage / MANAGE_EXTERNAL_STORAGE.</strong> So DocShelf can save your imported files into <code>/storage/emulated/0/DocShelf/</code> and read them back. Files never leave your device.</li>
-    <li><strong>Biometric / fingerprint.</strong> So the OS can verify it's you when unlocking. The biometric data is handled entirely by Android's secure subsystem; DocShelf only receives a yes/no answer.</li>
-    <li><strong>Notifications.</strong> So we can remind you when a passport / license / insurance / PUC is about to expire. Reminders are scheduled locally on your device — no push servers involved.</li>
     <li><strong>Receive shared content.</strong> So you can long-press a file in WhatsApp, Gmail, Drive, etc. → Share → DocShelf, to import it.</li>
+    <li><strong>Calendar (when you toggle expiry).</strong> When you set an expiry date on a document, DocShelf opens your phone's native calendar app pre-filled with the reminder event. You confirm; the calendar app stores it. DocShelf itself does not read your calendar.</li>
   </ul>
 
   <h2>What DocShelf stores</h2>
@@ -59,11 +58,12 @@
   </p>
   <ul>
     <li>The actual document files, in the <code>/DocShelf/</code> folder on your phone storage. You can browse them with any file manager.</li>
-    <li>A SQLite database (private to the app) that keeps track of names, categories, family-member ownership, expiry dates, and bookmarks.</li>
+    <li>A SQLite database (private to the app) that keeps track of names, categories, Space ownership, expiry dates, and bookmarks.</li>
   </ul>
   <p>
-    Your 4-digit PIN, if set, is hashed with SHA-256 and stored in
-    Android <code>SharedPreferences</code>. The plaintext PIN is never written anywhere.
+    DocShelf does <strong>not</strong> have any app-lock, biometric, or PIN feature. The
+    only protection on your DocShelf folder is your phone's own lock screen — which is
+    already protecting everything else on your device anyway.
   </p>
 
   <h2>What DocShelf does not do</h2>
@@ -102,7 +102,7 @@
 </article>
 
 <footer>
-  <p>Made for Indian families ❤️ · DocShelf is open-source under the MIT license</p>
+  <p>Built in India, made for the world ❤️ · DocShelf is open-source under the MIT license</p>
 </footer>
 
 </body>

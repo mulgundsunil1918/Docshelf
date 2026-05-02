@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../models/family_member.dart';
+import '../models/space.dart';
 import '../services/profile_service.dart';
 import '../utils/app_colors.dart';
 
-class FamilyPickerWidget extends StatelessWidget {
-  const FamilyPickerWidget({
+class SpacePickerWidget extends StatelessWidget {
+  const SpacePickerWidget({
     super.key,
     required this.selectedId,
     required this.onChanged,
@@ -15,26 +15,26 @@ class FamilyPickerWidget extends StatelessWidget {
   });
 
   final String? selectedId;
-  final ValueChanged<FamilyMember> onChanged;
+  final ValueChanged<Space> onChanged;
   final VoidCallback? onAddNew;
 
   @override
   Widget build(BuildContext context) {
     return Consumer<ProfileService>(
       builder: (context, profile, _) {
-        final members = profile.members;
+        final spaces = profile.spaces;
         return SizedBox(
           height: 90,
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
-              for (final m in members)
+              for (final s in spaces)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 6),
                   child: _Avatar(
-                    member: m,
-                    selected: m.id == selectedId,
-                    onTap: () => onChanged(m),
+                    space: s,
+                    selected: s.id == selectedId,
+                    onTap: () => onChanged(s),
                   ),
                 ),
               if (onAddNew != null)
@@ -82,12 +82,12 @@ class FamilyPickerWidget extends StatelessWidget {
 
 class _Avatar extends StatelessWidget {
   const _Avatar({
-    required this.member,
+    required this.space,
     required this.selected,
     required this.onTap,
   });
 
-  final FamilyMember member;
+  final Space space;
   final bool selected;
   final VoidCallback onTap;
 
@@ -118,13 +118,13 @@ class _Avatar extends StatelessWidget {
               ),
             ),
             child:
-                Text(member.avatar, style: TextStyle(fontSize: selected ? 26 : 22)),
+                Text(space.avatar, style: TextStyle(fontSize: selected ? 26 : 22)),
           ),
           const SizedBox(height: 4),
           SizedBox(
             width: 70,
             child: Text(
-              member.name,
+              space.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,

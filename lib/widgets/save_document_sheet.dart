@@ -6,7 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import '../models/category.dart';
-import '../models/family_member.dart';
+import '../models/space.dart';
 import '../services/calendar_service.dart';
 import '../services/category_service.dart';
 import '../services/database_service.dart';
@@ -17,7 +17,7 @@ import '../services/profile_service.dart';
 import '../utils/app_colors.dart';
 import 'category_picker_widget.dart';
 import 'expiry_date_picker.dart';
-import 'family_picker_widget.dart';
+import 'space_picker_widget.dart';
 
 class SaveDocumentSheet extends StatefulWidget {
   const SaveDocumentSheet({
@@ -37,7 +37,7 @@ class _SaveDocumentSheetState extends State<SaveDocumentSheet> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _descCtrl;
   Category? _category;
-  FamilyMember? _member;
+  Space? _space;
   DateTime? _expiry;
   int _reminderDays = 30;
   bool _bookmark = false;
@@ -49,7 +49,7 @@ class _SaveDocumentSheetState extends State<SaveDocumentSheet> {
     final base = p.basenameWithoutExtension(widget.sourcePath);
     _nameCtrl = TextEditingController(text: base);
     _descCtrl = TextEditingController();
-    _member = ProfileService.instance.activeMember;
+    _space = ProfileService.instance.activeSpace;
     if (widget.initialCategoryId != null) {
       _category =
           CategoryService.instance.getCategoryById(widget.initialCategoryId!);
@@ -72,7 +72,7 @@ class _SaveDocumentSheetState extends State<SaveDocumentSheet> {
   bool get _canSave =>
       _nameCtrl.text.trim().isNotEmpty &&
       _category != null &&
-      _member != null &&
+      _space != null &&
       !_saving;
 
   Future<void> _save() async {
@@ -86,7 +86,7 @@ class _SaveDocumentSheetState extends State<SaveDocumentSheet> {
       var doc = await FileStorageService.instance.storeDocument(
         sourcePath: widget.sourcePath,
         categoryId: _category!.id,
-        member: _member!,
+        space: _space!,
         customName: customName,
         expiryDate: _expiry,
         reminderDays: _reminderDays,
@@ -182,10 +182,10 @@ class _SaveDocumentSheetState extends State<SaveDocumentSheet> {
                       onChanged: (_) => setState(() {}),
                     ),
                     const SizedBox(height: 14),
-                    _FieldLabel('Family member'),
-                    FamilyPickerWidget(
-                      selectedId: _member?.id,
-                      onChanged: (m) => setState(() => _member = m),
+                    _FieldLabel('Space'),
+                    SpacePickerWidget(
+                      selectedId: _space?.id,
+                      onChanged: (s) => setState(() => _space = s),
                     ),
                     const SizedBox(height: 14),
                     _FieldLabel('Category'),

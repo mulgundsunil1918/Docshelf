@@ -1,15 +1,18 @@
 # DocShelf 🗂️
 
-> **Your Document Shelf** — a privacy-first document vault for Indian households.
+> **Your Document Shelf** — a privacy-first document vault for everyone.
 
-DocShelf is the single offline vault for every important family document — Aadhaar, PAN, ITR, sale deed, RC, marksheets, insurance, prescriptions — organized by who owns it (Self / Spouse / Kids / Parents) and what type it is. Biometric lock, expiry reminders, no cloud, no ads.
+DocShelf is one offline vault for any important document you care about — contracts, passports, marksheets, payslips, NDAs, homework, car quotations, insurance policies, warranty cards, lease agreements, anything. Organize into **Spaces** you define (yourself, family, work, study, side project, a class you teach), tag with categories, set expiry reminders that hand off to your phone calendar.
 
 - **Local-first.** Files stay on your device. No accounts, no upload, no tracking.
-- **Family profiles.** Each member gets their own document tree.
-- **Expiry reminders.** Set an expiry date — DocShelf notifies you 30 days before.
-- **Bank-grade lock.** Biometric or PIN, with auto-relock after backgrounding.
+- **Spaces.** A Space is a top-level context — yourself, a family member, work, a project, a class. Each Space has its own folder tree.
+- **14 starter categories.** Identity, Finance, Work, Education, Health, Insurance, Property, Vehicle, Bills, Receipts &amp; Warranties, Quotations, Travel, Family, Other. Add your own subfolders / categories anytime.
+- **Calendar reminders.** Toggle expiry on a file → DocShelf opens your phone calendar with the event pre-filled. The OS handles delivery (survives reboots and battery savers).
+- **Import from anywhere.** Long-press a WhatsApp / Drive / Gmail PDF → Share → DocShelf. Or scan device folders for files you already have.
 
 Built with Flutter for Android (iOS later).
+
+🌐 Marketing site &amp; docs: <https://mulgundsunil1918.github.io/Docshelf/>
 
 ---
 
@@ -20,8 +23,7 @@ Built with Flutter for Android (iOS later).
 - Storage: SQLite (`sqflite`) + filesystem at `/storage/emulated/0/DocShelf/`
 - File handling: `file_picker`, `share_plus`, `receive_sharing_intent`, `open_filex`
 - Viewers: `pdfx`, `video_player` + `chewie`
-- Auth: `local_auth` + SHA-256 PIN hash via `crypto`
-- Reminders: `flutter_local_notifications` + `timezone`
+- Reminders: `add_2_calendar` (system calendar hand-off — no local notification scheduling, no permissions, no battery-saver issues)
 - Theme: Material 3, Indigo `#3D5AFE` + Amber `#FFB300`, Nunito (`google_fonts`)
 
 ---
@@ -35,7 +37,7 @@ flutter pub get
 flutter run
 ```
 
-Requires `minSdk 23` (Android 6.0+). Verified Flutter analyze: **0 issues**.
+Requires `minSdk 23` (Android 6.0+). Verified `flutter analyze`: **0 issues**.
 
 ---
 
@@ -45,15 +47,15 @@ Requires `minSdk 23` (Android 6.0+). Verified Flutter analyze: **0 issues**.
 lib/
 ├── main.dart
 ├── data/
-│   └── default_categories.dart   # 11 root categories + subs
-├── models/                       # Document, Category, FamilyMember
-├── services/                     # DB, file storage, auth, notifications, etc.
-├── screens/                      # 17 screens (splash → settings)
+│   └── default_categories.dart   # 14 root categories + subs
+├── models/                       # Document, Category, Space
+├── services/                     # DB, file storage, calendar, profile, etc.
+├── screens/                      # ~16 screens (splash → settings)
 ├── widgets/                      # Pickers, sheets, thumbnails, coach marks
 └── utils/                        # Colors, theme, constants
 ```
 
-Full feature checklist lives in the original spec — every category, every screen, every reminder option is documented in the prompts that built it.
+Full feature checklist + design rationale live in the prompts that built the project.
 
 ---
 
@@ -89,10 +91,12 @@ The release config in [`android/app/build.gradle.kts`](android/app/build.gradle.
 
 ## Privacy
 
-DocShelf does not have a server. There is no account, no telemetry, no cloud sync in v1. Files live in `/storage/emulated/0/DocShelf/<MemberName>/<Category>/...` on your device. You can back them up via your usual phone backup; nothing is sent anywhere by the app.
+DocShelf does not have a server. There is no account, no telemetry, no cloud sync, no in-app purchases, no ads. Files live in `/storage/emulated/0/DocShelf/<SpaceName>/<Category>/…` on your device. Backups are via your usual phone backup — DocShelf itself never transmits anything.
+
+The only way someone reaches your DocShelf folder is by holding your unlocked phone — which means the only meaningful security boundary is your phone's own lock screen. We don't pretend to add a second one on top.
 
 ---
 
 ## License
 
-MIT © 2026 Sunil Mulgund · [mulgundsunil@gmail.com](mailto:mulgundsunil@gmail.com)
+MIT © 2026 Sunil Mulgund · [mulgundsunil@gmail.com](mailto:mulgundsunil@gmail.com) · *Built in India, made for the world ❤️*

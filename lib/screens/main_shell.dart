@@ -6,18 +6,18 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
-import '../models/family_member.dart';
+import '../models/space.dart';
 import '../services/document_notifier.dart';
 import '../services/profile_service.dart';
 import '../utils/app_colors.dart';
 import '../widgets/save_document_sheet.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
-import 'manage_family_screen.dart';
+import 'manage_spaces_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
 
-/// Bottom-nav shell with the persistent family-member switcher.
+/// Bottom-nav shell with the persistent Space switcher.
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -126,21 +126,21 @@ class _FamilySwitcher extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ProfileService>(
       builder: (context, profile, _) {
-        final members = profile.members;
-        final active = profile.activeMember;
+        final spaces = profile.spaces;
+        final active = profile.activeSpace;
         return SizedBox(
           height: 80,
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             scrollDirection: Axis.horizontal,
             children: [
-              for (final m in members)
-                _MemberChip(
-                  member: m,
-                  active: m.id == active?.id,
-                  onTap: () => profile.setActiveMember(m.id),
+              for (final s in spaces)
+                _SpaceChip(
+                  space: s,
+                  active: s.id == active?.id,
+                  onTap: () => profile.setActiveSpace(s.id),
                 ),
-              _AddMemberButton(),
+              _AddSpaceButton(),
             ],
           ),
         );
@@ -149,14 +149,14 @@ class _FamilySwitcher extends StatelessWidget {
   }
 }
 
-class _MemberChip extends StatelessWidget {
-  const _MemberChip({
-    required this.member,
+class _SpaceChip extends StatelessWidget {
+  const _SpaceChip({
+    required this.space,
     required this.active,
     required this.onTap,
   });
 
-  final FamilyMember member;
+  final Space space;
   final bool active;
   final VoidCallback onTap;
 
@@ -194,7 +194,7 @@ class _MemberChip extends StatelessWidget {
                 ),
               ),
               child: Text(
-                member.avatar,
+                space.avatar,
                 style: TextStyle(fontSize: active ? 26 : 22),
               ),
             ),
@@ -202,7 +202,7 @@ class _MemberChip extends StatelessWidget {
             SizedBox(
               width: 70,
               child: Text(
-                member.name,
+                space.name,
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -222,7 +222,7 @@ class _MemberChip extends StatelessWidget {
   }
 }
 
-class _AddMemberButton extends StatelessWidget {
+class _AddSpaceButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -230,7 +230,7 @@ class _AddMemberButton extends StatelessWidget {
       child: GestureDetector(
         onTap: () {
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const ManageFamilyScreen()),
+            MaterialPageRoute(builder: (_) => const ManageSpacesScreen()),
           );
         },
         child: Column(

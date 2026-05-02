@@ -95,7 +95,7 @@ class CategoryService extends ChangeNotifier {
     required String name,
     required String emoji,
     String? parentId,
-    String? ownerMemberId,
+    String? ownerSpaceId,
   }) async {
     final id = 'custom_${DateTime.now().millisecondsSinceEpoch}';
     final parent = parentId == null ? null : getCategoryById(parentId);
@@ -107,7 +107,7 @@ class CategoryService extends ChangeNotifier {
       parentId: parentId,
       depth: depth,
       isCustom: true,
-      ownerMemberId: ownerMemberId,
+      ownerSpaceId: ownerSpaceId,
     );
     await DatabaseService.instance.saveCustomCategory(cat);
     _custom.add(cat);

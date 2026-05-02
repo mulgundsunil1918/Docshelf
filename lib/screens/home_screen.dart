@@ -134,8 +134,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Consumer2<ProfileService, DocumentNotifier>(
       builder: (context, profile, _, __) {
-        final activeMember = profile.activeMember;
-        if (activeMember == null) {
+        final activeSpace = profile.activeSpace;
+        if (activeSpace == null) {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(24),
@@ -165,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_greeting()}, ${activeMember.name} 👋',
+                      '${_greeting()}, ${activeSpace.name} 👋',
                       style: GoogleFonts.nunito(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
@@ -231,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
               FutureBuilder<List<Document>>(
                 future: DatabaseService.instance.getExpiringDocuments(
                   30,
-                  memberId: activeMember.id,
+                  spaceId: activeSpace.id,
                 ),
                 builder: (context, snap) {
                   final docs = snap.data ?? const <Document>[];
@@ -269,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // ─── Stats row ─────────────────────────────────────────
               FutureBuilder<List<Document>>(
                 future: DatabaseService.instance.getAllDocuments(
-                  memberId: activeMember.id,
+                  spaceId: activeSpace.id,
                 ),
                 builder: (context, snap) {
                   final docs = snap.data ?? const <Document>[];
@@ -286,8 +286,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: _StatBox(
                           emoji: '👥',
-                          value: '${profile.members.length}',
-                          label: 'Members',
+                          value: '${profile.spaces.length}',
+                          label: 'Spaces',
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -318,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     return FutureBuilder<List<Document>>(
                       future: DatabaseService.instance.getDocumentsByCategories(
                         CategoryService.instance.getAllDescendantIds(c.id),
-                        memberId: activeMember.id,
+                        spaceId: activeSpace.id,
                       ),
                       builder: (context, snap) {
                         final count = (snap.data ?? const []).length;
@@ -346,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const _SectionHeader(title: 'Recently Added'),
               FutureBuilder<List<Document>>(
                 future: DatabaseService.instance
-                    .getAllDocuments(memberId: activeMember.id),
+                    .getAllDocuments(spaceId: activeSpace.id),
                 builder: (context, snap) {
                   final all = snap.data ?? const <Document>[];
                   final recent = all.take(8).toList();
@@ -380,7 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // ─── Bookmarked ────────────────────────────────────────
               FutureBuilder<List<Document>>(
                 future: DatabaseService.instance
-                    .getBookmarkedDocuments(memberId: activeMember.id),
+                    .getBookmarkedDocuments(spaceId: activeSpace.id),
                 builder: (context, snap) {
                   final marks = snap.data ?? const <Document>[];
                   if (marks.isEmpty) return const SizedBox.shrink();

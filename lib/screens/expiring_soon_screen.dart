@@ -78,7 +78,7 @@ class _ExpiringSoonScreenState extends State<ExpiringSoonScreen> {
   Widget build(BuildContext context) {
     return Consumer2<ProfileService, DocumentNotifier>(
       builder: (context, profile, _, __) {
-        final activeId = profile.activeMember?.id;
+        final activeId = profile.activeSpace?.id;
         return Scaffold(
           appBar: AppBar(
             title: const Text('Expiring soon'),
@@ -108,7 +108,7 @@ class _ExpiringSoonScreenState extends State<ExpiringSoonScreen> {
               Expanded(
                 child: FutureBuilder<List<Document>>(
                   future: DatabaseService.instance
-                      .getExpiringDocuments(365 * 30, memberId: activeId),
+                      .getExpiringDocuments(365 * 30, spaceId: activeId),
                   builder: (context, snap) {
                     final all = snap.data ?? const <Document>[];
                     final filtered =

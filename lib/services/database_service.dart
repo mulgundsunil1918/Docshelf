@@ -5,13 +5,13 @@ import 'package:sqflite/sqflite.dart';
 import '../data/default_categories.dart';
 import '../models/category.dart';
 import '../models/document.dart';
-import '../models/family_member.dart';
+import '../models/space.dart';
 import '../utils/constants.dart';
 
 /// SQLite wrapper for DocShelf.
 ///
-/// Three tables: `documents`, `custom_categories`, `family_members`.
-/// Default categories (the 11 roots) live in code, not the DB.
+/// Three tables: `documents`, `custom_categories`, `spaces`. Default
+/// categories (the built-in roots) live in code, not the DB.
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._();
   DatabaseService._();
@@ -35,7 +35,7 @@ class DatabaseService {
             name TEXT NOT NULL,
             path TEXT NOT NULL UNIQUE,
             categoryId TEXT NOT NULL,
-            familyMemberId TEXT NOT NULL,
+            spaceId TEXT NOT NULL,
             fileType TEXT NOT NULL,
             sizeBytes INTEGER NOT NULL,
             savedAt INTEGER NOT NULL,
@@ -50,7 +50,7 @@ class DatabaseService {
           'CREATE INDEX idx_documents_category ON documents(categoryId)',
         );
         await db.execute(
-          'CREATE INDEX idx_documents_member ON documents(familyMemberId)',
+          'CREATE INDEX idx_documents_space ON documents(spaceId)',
         );
         await db.execute(
           'CREATE INDEX idx_documents_expiry ON documents(expiryDate)',
@@ -61,16 +61,16 @@ class DatabaseService {
             name TEXT NOT NULL,
             parentId TEXT,
             emoji TEXT NOT NULL DEFAULT '📁',
-            ownerMemberId TEXT
+            ownerSpaceId TEXT
           )
         ''');
         await db.execute('''
-          CREATE TABLE family_members (
+          CREATE TABLE spaces (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
-            relation TEXT NOT NULL,
+            type TEXT NOT NULL,
             avatar TEXT NOT NULL,
-            dateOfBirth INTEGER,
+            description TEXT,
             createdAt INTEGER NOT NULL
           )
         ''');
@@ -89,12 +89,11 @@ class DatabaseService {
   // ─── Documents ──────────────────────────────────────────────────────
   Future<int> saveDocument(Document doc) async {
     final db = await database;
-    final id = await db.insert(
+    return db.insert(
       'documents',
       doc.toMap()..remove('id'),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    return id;
   }
 
   Future<int> updateDocument(Document doc) async {
@@ -107,12 +106,12 @@ class DatabaseService {
     );
   }
 
-  Future<List<Document>> getAllDocuments({String? memberId}) async {
+  Future<List<Document>> getAllDocuments({String? spaceId}) async {
     final db = await database;
     final rows = await db.query(
       'documents',
-      where: memberId == null ? null : 'familyMemberId = ?',
-      whereArgs: memberId == null ? null : [memberId],
+      where: spaceId == null ? null : 'spaceId = ?',
+      whereArgs: spaceId == null ? null : [spaceId],
       orderBy: 'savedAt DESC',
     );
     return rows.map(Document.fromMap).toList(growable: false);
@@ -120,14 +119,14 @@ class DatabaseService {
 
   Future<List<Document>> getDocumentsByCategory(
     String categoryId, {
-    String? memberId,
+    String? spaceId,
   }) async {
     final db = await database;
     final where = StringBuffer('categoryId = ?');
     final args = <Object?>[categoryId];
-    if (memberId != null) {
-      where.write(' AND familyMemberId = ?');
-      args.add(memberId);
+    if (spaceId != null) {
+      where.write(' AND spaceId = ?');
+      args.add(spaceId);
     }
     final rows = await db.query(
       'documents',
@@ -138,21 +137,21 @@ class DatabaseService {
     return rows.map(Document.fromMap).toList(growable: false);
   }
 
-  Future<List<Document>> getDocumentsByMember(String memberId) =>
-      getAllDocuments(memberId: memberId);
+  Future<List<Document>> getDocumentsBySpace(String spaceId) =>
+      getAllDocuments(spaceId: spaceId);
 
   Future<List<Document>> getDocumentsByCategories(
     List<String> categoryIds, {
-    String? memberId,
+    String? spaceId,
   }) async {
     if (categoryIds.isEmpty) return const [];
     final db = await database;
     final placeholders = List.filled(categoryIds.length, '?').join(',');
     final where = StringBuffer('categoryId IN ($placeholders)');
     final args = <Object?>[...categoryIds];
-    if (memberId != null) {
-      where.write(' AND familyMemberId = ?');
-      args.add(memberId);
+    if (spaceId != null) {
+      where.write(' AND spaceId = ?');
+      args.add(spaceId);
     }
     final rows = await db.query(
       'documents',
@@ -163,13 +162,13 @@ class DatabaseService {
     return rows.map(Document.fromMap).toList(growable: false);
   }
 
-  Future<List<Document>> getBookmarkedDocuments({String? memberId}) async {
+  Future<List<Document>> getBookmarkedDocuments({String? spaceId}) async {
     final db = await database;
     final where = StringBuffer('isBookmarked = 1');
     final args = <Object?>[];
-    if (memberId != null) {
-      where.write(' AND familyMemberId = ?');
-      args.add(memberId);
+    if (spaceId != null) {
+      where.write(' AND spaceId = ?');
+      args.add(spaceId);
     }
     final rows = await db.query(
       'documents',
@@ -180,11 +179,9 @@ class DatabaseService {
     return rows.map(Document.fromMap).toList(growable: false);
   }
 
-  /// Returns documents whose [Document.expiryDate] is within [withinDays]
-  /// from now (inclusive of already-expired).
   Future<List<Document>> getExpiringDocuments(
     int withinDays, {
-    String? memberId,
+    String? spaceId,
   }) async {
     final db = await database;
     final cutoff = DateTime.now()
@@ -192,9 +189,9 @@ class DatabaseService {
         .millisecondsSinceEpoch;
     final where = StringBuffer('expiryDate IS NOT NULL AND expiryDate <= ?');
     final args = <Object?>[cutoff];
-    if (memberId != null) {
-      where.write(' AND familyMemberId = ?');
-      args.add(memberId);
+    if (spaceId != null) {
+      where.write(' AND spaceId = ?');
+      args.add(spaceId);
     }
     final rows = await db.query(
       'documents',
@@ -249,12 +246,12 @@ class DatabaseService {
     );
   }
 
-  Future<int> deleteDocumentsByMember(String memberId) async {
+  Future<int> deleteDocumentsBySpace(String spaceId) async {
     final db = await database;
     return db.delete(
       'documents',
-      where: 'familyMemberId = ?',
-      whereArgs: [memberId],
+      where: 'spaceId = ?',
+      whereArgs: [spaceId],
     );
   }
 
@@ -272,12 +269,12 @@ class DatabaseService {
     String oldPath, {
     required String newCategoryId,
     String? newPath,
-    String? newMemberId,
+    String? newSpaceId,
   }) async {
     final db = await database;
     final patch = <String, Object?>{'categoryId': newCategoryId};
     if (newPath != null) patch['path'] = newPath;
-    if (newMemberId != null) patch['familyMemberId'] = newMemberId;
+    if (newSpaceId != null) patch['spaceId'] = newSpaceId;
     await db.update(
       'documents',
       patch,
@@ -296,13 +293,13 @@ class DatabaseService {
     );
   }
 
-  Future<List<Category>> getCustomCategories({String? memberId}) async {
+  Future<List<Category>> getCustomCategories({String? spaceId}) async {
     final db = await database;
     final rows = await db.query('custom_categories');
     final all = rows.map((r) => Category.fromMap(r)).toList();
-    if (memberId == null) return all;
+    if (spaceId == null) return all;
     return all
-        .where((c) => c.ownerMemberId == null || c.ownerMemberId == memberId)
+        .where((c) => c.ownerSpaceId == null || c.ownerSpaceId == spaceId)
         .toList();
   }
 
@@ -375,8 +372,6 @@ class DatabaseService {
     return Category.fromMap(rows.first);
   }
 
-  /// Returns a list of category names from root → leaf for the given id.
-  /// Walks default tree first, falls back to custom categories.
   Future<List<String>> getCategoryPathNames(String categoryId) async {
     final names = <String>[];
     final allDefaults = flattenDefaults();
@@ -399,41 +394,41 @@ class DatabaseService {
     return names;
   }
 
-  // ─── Family members ─────────────────────────────────────────────────
-  Future<void> saveFamilyMember(FamilyMember m) async {
+  // ─── Spaces ─────────────────────────────────────────────────────────
+  Future<void> saveSpace(Space s) async {
     final db = await database;
     await db.insert(
-      'family_members',
-      m.toMap(),
+      'spaces',
+      s.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
-  Future<List<FamilyMember>> getAllFamilyMembers() async {
+  Future<List<Space>> getAllSpaces() async {
     final db = await database;
-    final rows = await db.query('family_members', orderBy: 'createdAt ASC');
-    return rows.map(FamilyMember.fromMap).toList(growable: false);
+    final rows = await db.query('spaces', orderBy: 'createdAt ASC');
+    return rows.map(Space.fromMap).toList(growable: false);
   }
 
-  Future<FamilyMember?> getFamilyMemberById(String id) async {
+  Future<Space?> getSpaceById(String id) async {
     final db = await database;
     final rows = await db.query(
-      'family_members',
+      'spaces',
       where: 'id = ?',
       whereArgs: [id],
       limit: 1,
     );
     if (rows.isEmpty) return null;
-    return FamilyMember.fromMap(rows.first);
+    return Space.fromMap(rows.first);
   }
 
-  Future<void> deleteFamilyMember(String id) async {
+  Future<void> deleteSpace(String id) async {
     final db = await database;
     final batch = db.batch();
-    batch.delete('documents', where: 'familyMemberId = ?', whereArgs: [id]);
+    batch.delete('documents', where: 'spaceId = ?', whereArgs: [id]);
     batch.delete('custom_categories',
-        where: 'ownerMemberId = ?', whereArgs: [id]);
-    batch.delete('family_members', where: 'id = ?', whereArgs: [id]);
+        where: 'ownerSpaceId = ?', whereArgs: [id]);
+    batch.delete('spaces', where: 'id = ?', whereArgs: [id]);
     await batch.commit(noResult: true);
   }
 }

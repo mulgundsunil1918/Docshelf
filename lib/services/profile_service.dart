@@ -1,82 +1,82 @@
 import 'package:flutter/foundation.dart';
 
-import '../models/family_member.dart';
+import '../models/space.dart';
 import 'database_service.dart';
 import 'onboarding_service.dart';
 
-/// Holds the active family member + the full member list. Persists the
-/// selected member across app launches.
+/// Holds the active Space + the full Space list. Persists the selected
+/// Space across app launches.
 class ProfileService extends ChangeNotifier {
   static final ProfileService instance = ProfileService._();
   ProfileService._();
 
-  final List<FamilyMember> _members = [];
-  FamilyMember? _active;
+  final List<Space> _spaces = [];
+  Space? _active;
 
-  List<FamilyMember> get members => List.unmodifiable(_members);
-  FamilyMember? get activeMember => _active;
-  bool get hasMembers => _members.isNotEmpty;
+  List<Space> get spaces => List.unmodifiable(_spaces);
+  Space? get activeSpace => _active;
+  bool get hasSpaces => _spaces.isNotEmpty;
 
   Future<void> load() async {
-    final list = await DatabaseService.instance.getAllFamilyMembers();
-    _members
+    final list = await DatabaseService.instance.getAllSpaces();
+    _spaces
       ..clear()
       ..addAll(list);
-    final saved = await OnboardingService.instance.getActiveMemberId();
-    FamilyMember? matched;
+    final saved = await OnboardingService.instance.getActiveSpaceId();
+    Space? matched;
     if (saved != null) {
-      for (final m in _members) {
-        if (m.id == saved) {
-          matched = m;
+      for (final s in _spaces) {
+        if (s.id == saved) {
+          matched = s;
           break;
         }
       }
     }
-    _active = matched ?? (_members.isEmpty ? null : _members.first);
+    _active = matched ?? (_spaces.isEmpty ? null : _spaces.first);
     if (_active != null && _active!.id != saved) {
-      await OnboardingService.instance.setActiveMemberId(_active!.id);
+      await OnboardingService.instance.setActiveSpaceId(_active!.id);
     }
     notifyListeners();
   }
 
-  Future<void> setActiveMember(String id) async {
-    final m = _members.firstWhere(
-      (m) => m.id == id,
-      orElse: () => _members.first,
+  Future<void> setActiveSpace(String id) async {
+    final s = _spaces.firstWhere(
+      (s) => s.id == id,
+      orElse: () => _spaces.first,
     );
-    _active = m;
-    await OnboardingService.instance.setActiveMemberId(m.id);
+    _active = s;
+    await OnboardingService.instance.setActiveSpaceId(s.id);
     notifyListeners();
   }
 
-  Future<FamilyMember> addMember(FamilyMember m) async {
-    await DatabaseService.instance.saveFamilyMember(m);
-    _members.add(m);
+  Future<Space> addSpace(Space s) async {
+    await DatabaseService.instance.saveSpace(s);
+    _spaces.add(s);
     if (_active == null) {
-      _active = m;
-      await OnboardingService.instance.setActiveMemberId(m.id);
+      _active = s;
+      await OnboardingService.instance.setActiveSpaceId(s.id);
     }
     notifyListeners();
-    return m;
+    return s;
   }
 
-  Future<void> updateMember(FamilyMember m) async {
-    await DatabaseService.instance.saveFamilyMember(m);
-    final idx = _members.indexWhere((x) => x.id == m.id);
-    if (idx >= 0) _members[idx] = m;
-    if (_active?.id == m.id) _active = m;
+  Future<void> updateSpace(Space s) async {
+    await DatabaseService.instance.saveSpace(s);
+    final idx = _spaces.indexWhere((x) => x.id == s.id);
+    if (idx >= 0) _spaces[idx] = s;
+    if (_active?.id == s.id) _active = s;
     notifyListeners();
   }
 
-  /// Permanently deletes a family member, all their docs, and their
-  /// member-scoped custom categories.
-  Future<void> deleteMember(String id) async {
-    await DatabaseService.instance.deleteFamilyMember(id);
-    _members.removeWhere((m) => m.id == id);
+  /// Permanently deletes a Space, all its docs, and its scoped custom
+  /// categories.
+  Future<void> deleteSpace(String id) async {
+    await DatabaseService.instance.deleteSpace(id);
+    _spaces.removeWhere((s) => s.id == id);
     if (_active?.id == id) {
-      _active = _members.isEmpty ? null : _members.first;
+      _active = _spaces.isEmpty ? null : _spaces.first;
       if (_active != null) {
-        await OnboardingService.instance.setActiveMemberId(_active!.id);
+        await OnboardingService.instance.setActiveSpaceId(_active!.id);
       }
     }
     notifyListeners();

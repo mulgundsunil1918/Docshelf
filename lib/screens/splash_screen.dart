@@ -4,8 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../services/onboarding_service.dart';
 import '../utils/app_colors.dart';
-import 'family_setup_screen.dart';
 import 'main_shell.dart';
+import 'space_setup_screen.dart';
 import 'tutorial_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -31,8 +31,8 @@ class _SplashScreenState extends State<SplashScreen> {
       _go(const TutorialScreen());
       return;
     }
-    if (!await ob.hasCompletedFamilySetup()) {
-      _go(const FamilySetupScreen());
+    if (!await ob.hasCompletedSpaceSetup()) {
+      _go(const SpaceSetupScreen());
       return;
     }
     _go(const MainShell());

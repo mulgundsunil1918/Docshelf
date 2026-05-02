@@ -8,7 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../models/category.dart';
 import '../models/document.dart';
-import '../models/family_member.dart';
+import '../models/space.dart';
 import '../services/calendar_service.dart';
 import '../services/category_service.dart';
 import '../services/database_service.dart';
@@ -18,7 +18,7 @@ import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../widgets/category_picker_widget.dart';
 import '../widgets/expiry_date_picker.dart';
-import '../widgets/family_picker_widget.dart';
+import '../widgets/space_picker_widget.dart';
 
 class DocumentPropertiesScreen extends StatefulWidget {
   const DocumentPropertiesScreen({super.key, required this.doc});
@@ -66,7 +66,7 @@ class _DocumentPropertiesScreenState extends State<DocumentPropertiesScreen> {
   }
 
   Future<void> _changeOwner() async {
-    final picked = await showModalBottomSheet<FamilyMember>(
+    final picked = await showModalBottomSheet<Space>(
       context: context,
       builder: (_) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -77,16 +77,16 @@ class _DocumentPropertiesScreenState extends State<DocumentPropertiesScreen> {
                 style: GoogleFonts.nunito(
                     fontSize: 16, fontWeight: FontWeight.w900)),
             const SizedBox(height: 12),
-            FamilyPickerWidget(
-              selectedId: _doc.familyMemberId,
-              onChanged: (m) => Navigator.of(context).pop(m),
+            SpacePickerWidget(
+              selectedId: _doc.spaceId,
+              onChanged: (s) => Navigator.of(context).pop(s),
             ),
           ],
         ),
       ),
     );
-    if (picked == null || picked.id == _doc.familyMemberId) return;
-    final updated = _doc.copyWith(familyMemberId: picked.id);
+    if (picked == null || picked.id == _doc.spaceId) return;
+    final updated = _doc.copyWith(spaceId: picked.id);
     await DatabaseService.instance.updateDocument(updated);
     setState(() => _doc = updated);
     DocumentNotifier.instance.notifyDocumentChanged();
@@ -253,8 +253,8 @@ class _DocumentPropertiesScreenState extends State<DocumentPropertiesScreen> {
           ),
           _Row(
             icon: Icons.person_outline,
-            label: 'Owner',
-            value: _doc.familyMemberId,
+            label: 'Space',
+            value: _doc.spaceId,
             onTap: _changeOwner,
           ),
           _Row(

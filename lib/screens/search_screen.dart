@@ -83,7 +83,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     return Consumer3<ProfileService, DocumentNotifier, CategoryService>(
       builder: (context, profile, _, cats, __) {
-        final activeId = profile.activeMember?.id;
+        final activeId = profile.activeSpace?.id;
         return Scaffold(
           appBar: AppBar(
             title: TextField(
@@ -134,7 +134,7 @@ class _SearchScreenState extends State<SearchScreen> {
               Expanded(
                 child: FutureBuilder<List<Document>>(
                   future: DatabaseService.instance
-                      .getAllDocuments(memberId: activeId),
+                      .getAllDocuments(spaceId: activeId),
                   builder: (context, snap) {
                     if (snap.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());

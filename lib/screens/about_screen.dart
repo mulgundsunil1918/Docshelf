@@ -87,7 +87,7 @@ class _AboutScreenState extends State<AboutScreen> {
             emoji: '❤️',
             title: 'Why DocShelf',
             body:
-                "Indian families don't have a problem with documents — we have a problem with finding them. They sit in WhatsApp threads, scattered Drive folders, and physical piles. DocShelf is the single offline vault that organizes everything by family member and category, with biometric lock and expiry reminders. Built specifically for Indian households — Aadhaar, PAN, sale deed, RC, marksheet, ITR — all the documents you actually have.",
+                "Important documents — passports, contracts, marksheets, insurance policies, car quotations, homework assignments, license keys — sit scattered across WhatsApp threads, Drive folders, email attachments, and physical drawers. They're missing the moment you need them. DocShelf is one offline vault for any document you care about. Organize by Spaces (yourself, family, work, study, side project), tag with categories, set expiry reminders. Built for everyone with documents — students, professionals, freelancers, families.",
           ),
           _Card(
             emoji: '🔒',
@@ -99,7 +99,7 @@ class _AboutScreenState extends State<AboutScreen> {
             emoji: '👤',
             title: 'Made by',
             body:
-                'A small developer who got tired of asking parents to find old documents. If DocShelf saved you a trip back home, that\'s the win.',
+                'A small dev tired of asking family for documents and tired of digging through old emails. If DocShelf saves you one frustrating search, that\'s the win.',
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -155,7 +155,7 @@ class _AboutScreenState extends State<AboutScreen> {
               child: Column(
                 children: [
                   Text(
-                    'Made for Indian families ❤️',
+                    'Built in India, made for the world ❤️',
                     style: GoogleFonts.nunito(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,

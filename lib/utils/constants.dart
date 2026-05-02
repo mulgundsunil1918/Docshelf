@@ -22,8 +22,8 @@ class AppConstants {
   /// Catch-all category when a document is moved out of a deleted category.
   static const String unsortedCategoryId = 'cat_other';
 
-  // ─── Default profile ids ────────────────────────────────────────────
-  static const String selfMemberId = 'self';
+  // ─── Default Space ids ──────────────────────────────────────────────
+  static const String selfSpaceId = 'self';
 
   // ─── Reminders ──────────────────────────────────────────────────────
   static const int defaultReminderDays = 30;
@@ -31,9 +31,9 @@ class AppConstants {
 
   // ─── Onboarding flag keys (SharedPreferences) ───────────────────────
   static const String prefHasSeenTutorial = 'has_seen_tutorial';
-  static const String prefHasCompletedFamilySetup = 'has_completed_family_setup';
+  static const String prefHasCompletedSpaceSetup = 'has_completed_space_setup';
   static const String prefHasSeenCoachMarks = 'has_seen_coach_marks';
-  static const String prefActiveMemberId = 'active_member_id';
+  static const String prefActiveSpaceId = 'active_space_id';
   static const String prefThemeMode = 'theme_mode';
   static const String prefDefaultReminderDays = 'default_reminder_days';
 
@@ -48,38 +48,42 @@ class AppConstants {
   static const String websiteUrl =
       'https://mulgundsunil1918.github.io/Docshelf/';
 
-  // ─── Avatars (for family setup) ─────────────────────────────────────
+  // ─── Avatars (people + contexts — DocShelf is universal) ───────────
   static const List<String> avatarOptions = [
-    '👨', '👩', '🧑', '👨‍🦱', '👩‍🦰', '🧓', '👴', '👵',
-    '👦', '👧', '🧒', '👶',
+    '👤', '👨', '👩', '🧑', '👨‍🦱', '👩‍🦰', '🧓', '👴', '👵', '👦', '👧',
+    '🧒', '👶', '💼', '🎓', '🏠', '🏢', '📚', '💻', '✏️', '🛠️', '🏥',
+    '🚀', '🎨', '⭐',
   ];
 
   // ─── Home screen tips (rotating by day-of-month) ────────────────────
+  /// Universal — covers personal, work, study, finance, vehicle, project,
+  /// teaching, freelance. Whatever the user has in their life, there's a
+  /// tip for it.
   static const List<String> homeTips = [
     '📖 The best vault is the one you actually use.',
-    '🔐 Your data never leaves this phone — that is the point.',
-    '⏰ Set an expiry date on your passport — DocShelf will remind you.',
-    '👨‍👩‍👧 Add your spouse and parents — every document, every member.',
-    '📥 Long-press a WhatsApp PDF → Share → DocShelf → done.',
-    '🗂️ Bookmark documents you grab often — they show up on Home.',
-    '🚗 RC, PUC, insurance — keep all vehicle docs in one tap.',
-    '🩺 Lab reports older than 2 years can usually be archived.',
-    '🧾 Filing taxes? Bank statements live under Finance → Bank.',
-    '🏠 Sale deeds in Property — never lose them in old folders again.',
-    '🎓 Marksheets here means no more frantic searches before interviews.',
-    '✈️ Visas expire — DocShelf reminds you 30 days before.',
-    '🛡️ Health insurance card — Health → Insurance.',
-    '🪪 Driving license renewal? Vehicle → License.',
-    '💼 Keep payslips for the last 3 months — banks ask for them.',
-    '📑 Tip: Notes work too — store quick reminders alongside docs.',
-    '🔍 Use Search — it scans names, descriptions, and folders.',
-    '👨‍👩‍👧 Switch family member at the top — instantly see their docs.',
-    '📦 Unsorted category exists for that one weird document.',
-    '🏥 Prescription history lives in Health → Prescriptions.',
-    '⭐ Bookmark frequently used docs — Aadhaar, PAN, etc.',
+    '🛡️ Your data never leaves this phone — that is the point.',
+    '⏰ Set an expiry date on a contract or passport — DocShelf reminds you via your phone calendar.',
+    '🗂️ Spaces let you keep work, study, family, and projects separate — switch with one tap.',
+    '📥 Long-press any file in WhatsApp / Drive / Gmail → Share → DocShelf → done.',
+    '⭐ Bookmark documents you grab often — they show up on Home.',
+    '🚗 Vehicle docs (RC, insurance, PUC) and quotes for new cars all in one place.',
+    '🩺 Old lab reports? Drop them in Health and forget about them — searchable forever.',
+    '🧾 Tax season is calmer when bank statements + ITR are tagged and dated.',
+    '🏠 Sale deeds, rent agreements, property tax — never lose them in old email threads.',
+    '🎓 Students: keep assignments, marksheets, and project reports per semester.',
+    '✏️ Teachers: lesson plans, syllabi, and student records in one Space per class.',
+    '✈️ Visas, tickets, hotel bookings — all expire-trackable.',
+    '💼 Offer letters, NDAs, payslips, performance reviews — your career file in one folder tree.',
+    '🔍 Search scans names, descriptions, AND folder paths — find anything fast.',
+    '🚗 Got a car quotation? Drop it in Quotations & Estimates — compare them later side-by-side.',
+    '📦 Unsorted is fine — DocShelf doesn\'t force you to categorize on day one.',
+    '🛡️ Insurance policies: life, motor, home, term — all in their own folder.',
     '🌙 Dark mode is in Settings → Appearance.',
-    '💾 Files are stored in /DocShelf/ on your device — back up anytime.',
-    '🧓 Parents documents in your hand — peace of mind.',
-    '☕ Like DocShelf? Buy us a chai from the Settings screen.',
+    '💾 Files are stored in /DocShelf/ on your device — back up via your phone\'s normal backup.',
+    '🛒 Receipts, warranty cards, manuals — Receipts & Warranties has you covered.',
+    '🧑‍💻 Software people: keep license keys, tax invoices for SaaS, and contracts neatly tagged.',
+    '🏥 Health Insurance card — Health → Insurance, expires reminded.',
+    '☕ Like DocShelf? Buy us a chai from Settings — keeps it free for everyone.',
+    '🌍 DocShelf works fully offline — no account, no cloud, no tracking.',
   ];
 }

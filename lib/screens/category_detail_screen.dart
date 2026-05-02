@@ -103,7 +103,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   Widget build(BuildContext context) {
     return Consumer3<ProfileService, DocumentNotifier, CategoryService>(
       builder: (context, profile, _, cats, __) {
-        final activeId = profile.activeMember?.id;
+        final activeId = profile.activeSpace?.id;
         final breadcrumb = cats.getBreadcrumb(widget.category.id);
         final breadcrumbText = breadcrumb.map((c) => c.name).join(' / ');
         final children = cats.getChildren(widget.category.id);
@@ -201,7 +201,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                 child: FutureBuilder<List<Document>>(
                   future: DatabaseService.instance.getDocumentsByCategory(
                     widget.category.id,
-                    memberId: activeId,
+                    spaceId: activeId,
                   ),
                   builder: (context, snap) {
                     final docs = snap.data ?? const <Document>[];

@@ -48,8 +48,11 @@
   </p>
   <ul>
     <li><strong>Storage / MANAGE_EXTERNAL_STORAGE.</strong> So DocShelf can save your imported files into <code>/storage/emulated/0/DocShelf/</code> and read them back. Files never leave your device.</li>
+    <li><strong>Camera (only when you tap "Scan").</strong> Used by the on-device document scanner to capture paper documents — auto-edge detection, perspective correction and contrast enhancement happen entirely on your phone via Google ML Kit's on-device Document Scanner. No images are sent to any server. The camera is only active while the scanner UI is open; the moment you save or cancel, the camera is released.</li>
+    <li><strong>Read media images / video / audio</strong> (Android 13+). Used solely so the file picker can show you your own files when you tap Import. DocShelf does not browse your gallery on its own.</li>
     <li><strong>Receive shared content.</strong> So you can long-press a file in WhatsApp, Gmail, Drive, etc. → Share → DocShelf, to import it.</li>
     <li><strong>Calendar (when you toggle expiry).</strong> When you set an expiry date on a document, DocShelf opens your phone's native calendar app pre-filled with the reminder event. You confirm; the calendar app stores it. DocShelf itself does not read your calendar.</li>
+    <li><strong>Internet</strong>. Used only when you tap an outbound link (Privacy Policy, Rate the app, mailto). DocShelf has no telemetry, analytics, or background network calls.</li>
   </ul>
 
   <h2>What DocShelf stores</h2>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Auto Backup rules for Android <= 11 (API 30).
+    DocShelf intentionally OPTS OUT of Google Auto Backup so a reinstall
+    on the same Google account doesn't silently restore old SharedPrefs
+    (which would skip the tutorial / coach marks). The actual document
+    files live in /storage/emulated/0/DocShelf/ on shared storage and
+    survive uninstalls anyway, so users lose nothing.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" />
+    <exclude domain="database" />
+    <exclude domain="file" />
+    <exclude domain="external" />
+    <exclude domain="root" />
+</full-backup-content>

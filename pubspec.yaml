@@ -1,7 +1,7 @@
 name: docshelf
 description: "DocShelf — a privacy-first document vault for Indian households."
 publish_to: 'none'
-version: 0.2.0+2
+version: 0.2.0+13
 
 environment:
   sdk: ^3.11.1
@@ -36,15 +36,22 @@ dependencies:
 
   # Utilities
   package_info_plus: ^9.0.0
-  intl: ^0.19.0
+  intl: ^0.20.2
   shared_preferences: ^2.3.3
   provider: ^6.1.2
   url_launcher: ^6.3.1
-  permission_handler: ^11.3.0
+  permission_handler: ^12.0.1
   device_info_plus: ^10.1.0
 
   # ─── DocShelf-only ────────────────────────────────────────────────
   add_2_calendar: ^3.0.1               # Hands expiry events to the system calendar app
+  cunning_document_scanner: ^1.2.5     # Native ML Kit document scanner (offline edge detection + perspective correction + B&W boost)
+  pdf: ^3.11.1                         # Stitches multi-page scans into a single PDF (offline)
+  in_app_review: ^2.0.10               # Native Play Store review prompt (rate-limited by Google server-side)
+  flutter_markdown: ^0.7.4              # Read-only markdown rendering for note viewer
+  # Note: flutter_quill was removed in v0.2.0+11. The editor now uses a
+  # plain Flutter TextField + a Markdown-syntax toolbar — no third-party
+  # rendering layer that could silently fail across Android versions.
 
 dev_dependencies:
   flutter_test:
@@ -61,8 +68,12 @@ flutter:
 # ── App launcher icon ─────────────────────────────────────────────────
 flutter_launcher_icons:
   android: true
-  ios: false
+  ios: true
   image_path: "assets/icon/app_icon.png"
   min_sdk_android: 21
   adaptive_icon_background: "#3D5AFE"
-  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  # iOS requires opaque icons (App Store rejects transparent / alpha).
+  # The app_icon.png we ship is already a solid indigo gradient with
+  # the stacked-bars motif — no transparency.
+  remove_alpha_ios: true

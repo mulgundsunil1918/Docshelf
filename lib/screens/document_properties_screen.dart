@@ -8,7 +8,6 @@ import 'package:share_plus/share_plus.dart';
 
 import '../models/category.dart';
 import '../models/document.dart';
-import '../models/space.dart';
 import '../services/calendar_service.dart';
 import '../services/category_service.dart';
 import '../services/database_service.dart';
@@ -18,7 +17,6 @@ import '../utils/app_colors.dart';
 import '../utils/constants.dart';
 import '../widgets/category_picker_widget.dart';
 import '../widgets/expiry_date_picker.dart';
-import '../widgets/space_picker_widget.dart';
 
 class DocumentPropertiesScreen extends StatefulWidget {
   const DocumentPropertiesScreen({super.key, required this.doc});
@@ -60,33 +58,6 @@ class _DocumentPropertiesScreenState extends State<DocumentPropertiesScreen> {
     );
     if (res == null || res.isEmpty || res == _doc.name) return;
     final updated = _doc.copyWith(name: res);
-    await DatabaseService.instance.updateDocument(updated);
-    setState(() => _doc = updated);
-    DocumentNotifier.instance.notifyDocumentChanged();
-  }
-
-  Future<void> _changeOwner() async {
-    final picked = await showModalBottomSheet<Space>(
-      context: context,
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Change owner',
-                style: GoogleFonts.nunito(
-                    fontSize: 16, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 12),
-            SpacePickerWidget(
-              selectedId: _doc.spaceId,
-              onChanged: (s) => Navigator.of(context).pop(s),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (picked == null || picked.id == _doc.spaceId) return;
-    final updated = _doc.copyWith(spaceId: picked.id);
     await DatabaseService.instance.updateDocument(updated);
     setState(() => _doc = updated);
     DocumentNotifier.instance.notifyDocumentChanged();
@@ -250,12 +221,6 @@ class _DocumentPropertiesScreenState extends State<DocumentPropertiesScreen> {
             label: 'Name',
             value: _doc.name,
             onTap: _rename,
-          ),
-          _Row(
-            icon: Icons.person_outline,
-            label: 'Space',
-            value: _doc.spaceId,
-            onTap: _changeOwner,
           ),
           _Row(
             icon: Icons.folder_outlined,

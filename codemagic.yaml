@@ -1,0 +1,139 @@
+workflows:
+  ios-release:
+    name: DocShelf iOS — TestFlight + App Store
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: codemagic-app-store-connect
+      # ↑ rename this to whatever your App Store Connect API
+      #   integration is called inside Codemagic settings.
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.docshelf.myapp
+      vars:
+        APP_STORE_APPLE_ID: "$APP_STORE_APPLE_ID"
+        # Set in Codemagic → environment variables (NOT committed):
+        #   APP_STORE_APPLE_ID — your numeric Apple ID for the listing
+        #   (you'll find it in App Store Connect once the app exists).
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'v*'
+          include: true
+
+    scripts:
+      - name: Pin Flutter version
+        script: |
+          flutter --version
+          flutter precache --ios
+
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+
+      - name: Pod install
+        script: |
+          cd ios
+          pod install
+          cd ..
+
+      - name: Static analysis
+        script: |
+          flutter analyze lib
+
+      - name: Set build number from BUILD_NUMBER var
+        script: |
+          # Codemagic auto-increments BUILD_NUMBER per build. We use that
+          # as the iOS CFBundleVersion so each TestFlight upload is unique
+          # without us having to bump pubspec mid-session.
+          cd ios
+          agvtool new-version -all $(($BUILD_NUMBER + 100))
+          cd ..
+
+      - name: Flutter build (no codesign — Codemagic signs)
+        script: |
+          flutter build ipa --release \
+            --build-name=0.2.0 \
+            --build-number=$(($BUILD_NUMBER + 100)) \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+
+    publishing:
+      app_store_connect:
+        # Push the IPA straight to TestFlight on every tag build.
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - Internal
+        # Set submit_to_app_store: true once you're ready to push from
+        # TestFlight to public review. For first runs, leave this off.
+        submit_to_app_store: false
+
+      email:
+        recipients:
+          - mulgundsunil@gmail.com
+        notify:
+          success: true
+          failure: true
+
+  android-release:
+    name: DocShelf Android — Play Internal
+    max_build_duration: 30
+    instance_type: linux_x2
+    environment:
+      android_signing:
+        - docshelf_keystore
+        # ↑ rename to whatever you uploaded to Codemagic →
+        #   Code-signing identities → Android keystores. Upload
+        #   `android/app/docshelf-upload.jks` + the password from
+        #   `.secrets/UPLOAD_KEYSTORE_PASSWORD.txt`.
+      flutter: stable
+      vars:
+        PACKAGE_NAME: "com.docshelf.myapp"
+
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'v*'
+          include: true
+
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Static analysis
+        script: flutter analyze lib
+
+      - name: Build AAB
+        script: |
+          flutter build appbundle --release \
+            --build-name=0.2.0 \
+            --build-number=$(($BUILD_NUMBER + 100))
+
+    artifacts:
+      - build/**/outputs/**/*.aab
+      - build/**/outputs/**/*.apk
+      - build/**/outputs/**/mapping.txt
+
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        submit_as_draft: true
+      email:
+        recipients:
+          - mulgundsunil@gmail.com
+        notify:
+          success: true
+          failure: true

@@ -53,6 +53,34 @@ class AppColors {
   static const Color danger = Color(0xFFD32F2F);
 
   // ─── Utility helpers ────────────────────────────────────────────────
+  // ─── Note backgrounds (sticky-note tints) ───────────────────────────
+  /// Index 0 = default scaffold surface (no tint).
+  /// 1..7 = soft tinted backgrounds. Designed to look correct in both
+  /// light and dark mode — the editor mixes them at low alpha over the
+  /// theme's surface color so they stay legible.
+  static const List<Color> noteBgLight = [
+    Color(0x00000000),  // 0 default — no tint
+    Color(0xFFFFF9C4),  // yellow
+    Color(0xFFDCEDC8),  // mint
+    Color(0xFFB3E5FC),  // sky
+    Color(0xFFFFCDD2),  // blush
+    Color(0xFFE1BEE7),  // lavender
+    Color(0xFFFFE0B2),  // peach
+    Color(0xFFD7CCC8),  // taupe
+  ];
+
+  /// Same palette in muted dark-mode form (overlay opacity).
+  static const List<Color> noteBgDark = [
+    Color(0x00000000),
+    Color(0x33FFEB3B),  // yellow @ 20%
+    Color(0x338BC34A),  // mint
+    Color(0x3303A9F4),  // sky
+    Color(0x33EF5350),  // blush
+    Color(0x33AB47BC),  // lavender
+    Color(0x33FF9800),  // peach
+    Color(0x338D6E63),  // taupe
+  ];
+
   /// Standard indigo gradient used on hero banners and the splash screen.
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,

@@ -33,37 +33,52 @@ class _DeviceFileSearchScreenState extends State<DeviceFileSearchScreen> {
     '/storage/emulated/0/Android/data/com.google.android.gm/cache',
   ];
 
-  bool _scanning = true;
+  bool _scanning = false;
+  bool _hasScanned = false;
+  int _scannedCount = 0;
+  String _currentDir = '';
   final _results = <_DeviceFile>[];
   _Filter _filter = _Filter.all;
   String _query = '';
 
-  @override
-  void initState() {
-    super.initState();
-    _scan();
-  }
-
   Future<void> _scan() async {
+    setState(() {
+      _scanning = true;
+      _scannedCount = 0;
+      _results.clear();
+      _hasScanned = true;
+    });
     final found = <_DeviceFile>[];
     for (final root in _searchRoots) {
+      if (!mounted) return;
+      setState(() => _currentDir = root.split('/').last);
       final dir = Directory(root);
       if (!dir.existsSync()) continue;
       try {
-        await for (final e in dir.list(recursive: true, followLinks: false)) {
+        // Per-root 20s budget; long trees get truncated rather than hung.
+        await dir
+            .list(recursive: true, followLinks: false)
+            .timeout(const Duration(seconds: 20),
+                onTimeout: (_) {})
+            .forEach((e) {
           if (e is File) {
             final ext = p.extension(e.path).replaceFirst('.', '').toLowerCase();
-            if (ext.isEmpty) continue;
+            if (ext.isEmpty) return;
             final type = Document.typeFromExtension(ext);
-            if (type == DocFileType.other) continue;
-            found.add(_DeviceFile(
-              path: e.path,
-              name: p.basename(e.path),
-              size: e.lengthSync(),
-              type: type,
-            ));
+            if (type == DocFileType.other) return;
+            try {
+              found.add(_DeviceFile(
+                path: e.path,
+                name: p.basename(e.path),
+                size: e.lengthSync(),
+                type: type,
+              ));
+              if (mounted && found.length % 25 == 0) {
+                setState(() => _scannedCount = found.length);
+              }
+            } catch (_) {/* skip files we can't stat */}
           }
-        }
+        });
       } catch (_) {/* unreadable subtree, skip */}
     }
     found.sort((a, b) => a.name.compareTo(b.name));
@@ -72,6 +87,7 @@ class _DeviceFileSearchScreenState extends State<DeviceFileSearchScreen> {
       _results
         ..clear()
         ..addAll(found);
+      _scannedCount = found.length;
       _scanning = false;
     });
   }
@@ -87,10 +103,63 @@ class _DeviceFileSearchScreenState extends State<DeviceFileSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // iOS sandbox forbids cross-app folder scanning — there is no
+    // public WhatsApp / Drive / Downloads directory we can list. Show
+    // a clear "use Files / Share to import" hint instead.
+    if (Platform.isIOS) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Find on device')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🍎', style: TextStyle(fontSize: 56)),
+                const SizedBox(height: 14),
+                Text(
+                  'Use Files or Share on iOS',
+                  style: GoogleFonts.nunito(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'iOS keeps each app in its own sandbox, so DocShelf '
+                  'cannot scan WhatsApp / Drive / Downloads folders the '
+                  'way it does on Android.\n\n'
+                  'Instead:\n'
+                  '• Open the file in any app → Share → DocShelf, OR\n'
+                  '• Open the iOS Files app → long-press a file → Share → DocShelf, OR\n'
+                  '• Tap Import on Home and pick a file via the Files browser.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.gray,
+                    height: 1.55,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final filtered = _filtered.toList();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Find on device'),
+        actions: [
+          if (_hasScanned)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Re-scan',
+              onPressed: _scanning ? null : _scan,
+            ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(110),
           child: Column(
@@ -131,18 +200,45 @@ class _DeviceFileSearchScreenState extends State<DeviceFileSearchScreen> {
         ),
       ),
       body: _scanning
-          ? const Center(child: CircularProgressIndicator())
-          : filtered.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(
-                      'No matching files found.\nTry the Import button on Home for any file path.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Scanning $_currentDir…',
+                      style:
+                          GoogleFonts.nunito(fontWeight: FontWeight.w700),
                     ),
-                  ),
-                )
+                    const SizedBox(height: 4),
+                    Text(
+                      '$_scannedCount documents found so far',
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.gray,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : !_hasScanned
+              ? _StartScanHint(onScan: _scan)
+              : filtered.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Text(
+                          'No matching files. Tap Refresh to scan again.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    )
               : ListView.separated(
                   itemCount: filtered.length,
                   separatorBuilder: (_, __) => const Divider(height: 1),
@@ -224,6 +320,51 @@ class _DeviceFile {
   final String name;
   final int size;
   final DocFileType type;
+}
+
+class _StartScanHint extends StatelessWidget {
+  const _StartScanHint({required this.onScan});
+  final VoidCallback onScan;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🔎', style: TextStyle(fontSize: 64)),
+            const SizedBox(height: 14),
+            Text(
+              'Find files you already have',
+              style: GoogleFonts.nunito(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Type a name above to filter once we've scanned. Or tap Scan to look in:\n\nWhatsApp · Telegram · Downloads · DCIM · Pictures · Documents · Bluetooth · Gmail cache",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.gray,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              onPressed: onScan,
+              icon: const Icon(Icons.travel_explore),
+              label: const Text('Scan device'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 enum _Filter { all, pdf, image, document, video }

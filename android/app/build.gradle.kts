@@ -21,7 +21,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.docshelf.docshelf"
+    namespace = "com.docshelf.myapp"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -35,11 +35,14 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.docshelf.docshelf"
+        applicationId = "com.docshelf.myapp"
         minSdk = flutter.minSdkVersion
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        // Read versionCode + versionName from pubspec.yaml (Flutter Gradle
+        // plugin injects these). Single source of truth — no risk of the
+        // pubspec and gradle drifting out of sync between Play uploads.
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
     }
 
     signingConfigs {

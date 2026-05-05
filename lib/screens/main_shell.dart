@@ -2,22 +2,20 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
-import '../models/space.dart';
-import '../services/document_notifier.dart';
-import '../services/profile_service.dart';
-import '../utils/app_colors.dart';
+import '../services/onboarding_service.dart';
+import '../services/permission_service.dart';
+import '../services/review_service.dart';
 import '../widgets/save_document_sheet.dart';
+import 'batch_import_screen.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
-import 'manage_spaces_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
 
-/// Bottom-nav shell with the persistent Space switcher.
+/// Bottom-nav shell with 4 tabs. Receives share-intents and prompts for
+/// the top-level storage permission on first launch.
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -34,35 +32,101 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     _wireSharingIntent();
+    OnboardingService.instance.activeTabRequest.addListener(_onTabRequest);
+    // Request top-level storage access so files land in the visible
+    // /storage/emulated/0/DocShelf/ folder, not the app's private dir.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final granted =
+          await PermissionService.instance.requestStoragePermission();
+      if (!granted && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            duration: Duration(seconds: 6),
+            content: Text(
+              'Files will be stored privately. Enable "All files access" '
+              'in Settings to make /DocShelf/ visible in your file manager.',
+            ),
+          ),
+        );
+      }
+      // Auto-prompt for in-app review once the install is 3+ days old
+      // and at most every 7 days. Google rate-limits server-side too.
+      unawaited(ReviewService.instance.maybePromptAutomatically());
+    });
+  }
+
+  void _onTabRequest() {
+    final i = OnboardingService.instance.activeTabRequest.value;
+    if (i < 0 || i > 3) return;
+    if (!mounted) return;
+    setState(() => _index = i);
   }
 
   @override
   void dispose() {
+    OnboardingService.instance.activeTabRequest.removeListener(_onTabRequest);
     _sharingSub?.cancel();
     super.dispose();
   }
 
   // ─── Share intent ───────────────────────────────────────────────────
+  // Wires up two delivery paths:
+  //   - getMediaStream()   — warm starts (app already running when share
+  //                          fires)
+  //   - getInitialMedia()  — cold starts (share triggered the launch)
+  //
+  // For the cold-start path we DEFER processing to a post-frame callback
+  // so the Navigator + Scaffold are mounted before we try to push a
+  // route or show a modal sheet. Without this, on first launch the
+  // share-handler tries to push before the widget tree is ready and the
+  // modal silently dismisses → user sees the app open with no save flow,
+  // exactly the bug.
   void _wireSharingIntent() {
     if (!Platform.isAndroid && !Platform.isIOS) return;
     final inst = ReceiveSharingIntent.instance;
     _sharingSub = inst.getMediaStream().listen(_onSharedFiles);
-    inst.getInitialMedia().then((files) {
-      if (files.isNotEmpty) _onSharedFiles(files);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final files = await inst.getInitialMedia();
+      if (files.isNotEmpty) {
+        // Tiny delay lets the splash → main-shell transition complete
+        // on slower devices before the route push fires.
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        if (!mounted) return;
+        await _onSharedFiles(files);
+      }
+      // Always reset so the next launch isn't a replay of this intent.
       inst.reset();
     });
   }
 
   Future<void> _onSharedFiles(List<SharedMediaFile> files) async {
     if (!mounted || files.isEmpty) return;
-    for (final f in files) {
-      if (!mounted) return;
+    final paths = files
+        .map((f) => f.path)
+        .where((p) => p.trim().isNotEmpty)
+        .toList(growable: false);
+    if (paths.isEmpty) return;
+
+    if (paths.length == 1) {
+      // Single share → quick save sheet.
       await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
-        builder: (_) => SaveDocumentSheet(sourcePath: f.path),
+        builder: (_) => SaveDocumentSheet(sourcePath: paths.first),
       );
+      return;
     }
+
+    // Multi-file share (e.g. user picked 3 PDFs in WhatsApp → Share →
+    // DocShelf). One-folder-fits-all UX: open the batch import screen
+    // pre-loaded with every shared path so the user picks ONE folder
+    // and saves them all at once instead of N sequential sheets.
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BatchImportScreen(preloadedPaths: paths),
+      ),
+    );
   }
 
   // ─── Build ──────────────────────────────────────────────────────────
@@ -71,21 +135,13 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            const _FamilySwitcher(),
-            const Divider(height: 1),
-            Expanded(
-              child: IndexedStack(
-                index: _index,
-                children: const [
-                  HomeScreen(),
-                  LibraryScreen(),
-                  SearchScreen(),
-                  SettingsScreen(),
-                ],
-              ),
-            ),
+        child: IndexedStack(
+          index: _index,
+          children: const [
+            HomeScreen(),
+            LibraryScreen(),
+            SearchScreen(),
+            SettingsScreen(),
           ],
         ),
       ),
@@ -114,157 +170,6 @@ class _MainShellState extends State<MainShell> {
             label: 'Settings',
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FamilySwitcher extends StatelessWidget {
-  const _FamilySwitcher();
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<ProfileService>(
-      builder: (context, profile, _) {
-        final spaces = profile.spaces;
-        final active = profile.activeSpace;
-        return SizedBox(
-          height: 80,
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            scrollDirection: Axis.horizontal,
-            children: [
-              for (final s in spaces)
-                _SpaceChip(
-                  space: s,
-                  active: s.id == active?.id,
-                  onTap: () => profile.setActiveSpace(s.id),
-                ),
-              _AddSpaceButton(),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _SpaceChip extends StatelessWidget {
-  const _SpaceChip({
-    required this.space,
-    required this.active,
-    required this.onTap,
-  });
-
-  final Space space;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final size = active ? 56.0 : 44.0;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: GestureDetector(
-        onTap: () {
-          onTap();
-          DocumentNotifier.instance.notifyDocumentChanged();
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              width: size,
-              height: size,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: active
-                    ? AppColors.primary.withValues(alpha: 0.14)
-                    : Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.06),
-                border: Border.all(
-                  color: active
-                      ? AppColors.primary
-                      : Colors.transparent,
-                  width: 2,
-                ),
-              ),
-              child: Text(
-                space.avatar,
-                style: TextStyle(fontSize: active ? 26 : 22),
-              ),
-            ),
-            const SizedBox(height: 2),
-            SizedBox(
-              width: 70,
-              child: Text(
-                space.name,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.nunito(
-                  fontSize: 11,
-                  fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                  color: active
-                      ? AppColors.primary
-                      : Theme.of(context).textTheme.bodySmall?.color,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AddSpaceButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const ManageSpacesScreen()),
-          );
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accent.withValues(alpha: 0.16),
-                border: Border.all(
-                  color: AppColors.accent.withValues(alpha: 0.4),
-                  style: BorderStyle.solid,
-                ),
-              ),
-              child: const Icon(Icons.add, color: AppColors.accentDark),
-            ),
-            const SizedBox(height: 2),
-            SizedBox(
-              width: 70,
-              child: Text(
-                'Add',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.nunito(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.accentDark,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

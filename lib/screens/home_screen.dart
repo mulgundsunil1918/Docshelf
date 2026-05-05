@@ -3,23 +3,27 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../data/default_categories.dart';
 import '../models/document.dart';
+import '../services/camera_scan_service.dart';
 import '../services/category_service.dart';
 import '../services/database_service.dart';
 import '../services/document_notifier.dart';
 import '../services/file_storage_service.dart';
 import '../services/onboarding_service.dart';
-import '../services/profile_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
+import '../utils/document_share.dart';
+import '../utils/friendly_error.dart';
 import '../widgets/coach_mark_overlay.dart';
 import '../widgets/document_thumbnail.dart';
 import '../widgets/save_document_sheet.dart';
+import '../widgets/support_developer_button.dart';
+import 'batch_import_screen.dart';
 import 'category_detail_screen.dart';
 import 'device_file_search_screen.dart';
 import 'document_viewer_screen.dart';
 import 'expiring_soon_screen.dart';
+import 'note_editor_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late int _tipIndex;
   int _storageBytes = 0;
   final _importKey = GlobalKey();
+  final _scanKey = GlobalKey();
   final _findKey = GlobalKey();
   final _categoriesKey = GlobalKey();
 
@@ -42,19 +47,39 @@ class _HomeScreenState extends State<HomeScreen> {
     _tipIndex = day % AppConstants.homeTips.length;
     _refreshStorage();
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
+    OnboardingService.instance.coachMarkReplaySignal.addListener(_onReplay);
   }
 
-  Future<void> _maybeShowCoachMarks() async {
-    final seen = await OnboardingService.instance.hasSeenCoachMarks();
-    if (seen || !mounted) return;
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+  @override
+  void dispose() {
+    OnboardingService.instance.coachMarkReplaySignal.removeListener(_onReplay);
+    super.dispose();
+  }
+
+  void _onReplay() {
+    if (!mounted) return;
+    // Settings tapped "Replay walkthrough" — force the overlay to show
+    // even if the seen flag is already cleared.
+    Future<void>.delayed(
+      const Duration(milliseconds: 300),
+      _showCoachMarksNow,
+    );
+  }
+
+  Future<void> _showCoachMarksNow() async {
     if (!mounted) return;
     final steps = <CoachMark>[
       CoachMark(
         targetKey: _importKey,
-        title: '📥 Add documents from anywhere',
+        title: '📥 Import any file',
         body:
-            'Pick from device storage, or share into DocShelf from any app.',
+            'Pick a single file, multiple files, or a whole folder — or share into DocShelf from any other app.',
+      ),
+      CoachMark(
+        targetKey: _scanKey,
+        title: '📷 Scan paper documents',
+        body:
+            'Auto-edge detection, perspective correction, multi-page → single PDF. All on-device — nothing leaves your phone.',
       ),
       CoachMark(
         targetKey: _findKey,
@@ -64,13 +89,22 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       CoachMark(
         targetKey: _categoriesKey,
-        title: '🗂️ Your vault, organized the Indian way',
+        title: '🗂️ Categories that match real life',
         body:
-            'Identity, Finance, Health, Property — categories that match the documents you actually have.',
+            'Identity, Finance, Work, Education, Health, Insurance, Quotations — 14 starter folders. Add your own anytime.',
       ),
     ];
-    OnboardingService.instance.markCoachMarksSeen();
+    if (!mounted) return;
     CoachMarkOverlay.show(context, steps: steps);
+  }
+
+  Future<void> _maybeShowCoachMarks() async {
+    final seen = await OnboardingService.instance.hasSeenCoachMarks();
+    if (seen || !mounted) return;
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    OnboardingService.instance.markCoachMarksSeen();
+    await _showCoachMarksNow();
   }
 
   Future<void> _refreshStorage() async {
@@ -95,12 +129,64 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Good Evening';
   }
 
-  Future<void> _importFile() async {
+  /// Bottom-sheet picker offering three import modes.
+  Future<void> _showImportSheet() async {
+    final mode = await showModalBottomSheet<String>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+              child: Text(
+                'Import documents',
+                style: GoogleFonts.nunito(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.insert_drive_file_outlined),
+              title: const Text('Import a single file'),
+              subtitle: const Text('Pick one PDF, image, doc, or note'),
+              onTap: () => Navigator.of(context).pop('single'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.file_copy_outlined),
+              title: const Text('Import multiple files'),
+              subtitle: const Text('Pick several at once'),
+              onTap: () => Navigator.of(context).pop('multi'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder_open_outlined),
+              title: const Text('Import an entire folder'),
+              subtitle: const Text('Recursively scan a folder & batch-import'),
+              onTap: () => Navigator.of(context).pop('folder'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (mode == null || !mounted) return;
+    switch (mode) {
+      case 'single':
+        await _importSingle();
+      case 'multi':
+      case 'folder':
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const BatchImportScreen()),
+        );
+    }
+  }
+
+  Future<void> _importSingle() async {
     final res = await FilePicker.platform.pickFiles(allowMultiple: false);
     if (res == null || res.files.isEmpty) return;
     final path = res.files.first.path;
-    if (path == null) return;
-    if (!mounted) return;
+    if (path == null || !mounted) return;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -109,18 +195,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _scanCamera() async {
-    final res = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      allowMultiple: false,
-    );
-    if (res == null || res.files.isEmpty) return;
-    final path = res.files.first.path;
-    if (path == null) return;
-    if (!mounted) return;
+    String? scanned;
+    try {
+      scanned = await CameraScanService.instance.scanDocument();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(FriendlyError.from(e))),
+      );
+      return;
+    }
+    if (scanned == null || !mounted) return;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => SaveDocumentSheet(sourcePath: path),
+      builder: (_) => SaveDocumentSheet(sourcePath: scanned!),
     );
   }
 
@@ -130,22 +219,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _newNote() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const NoteEditorScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer2<ProfileService, DocumentNotifier>(
-      builder: (context, profile, _, __) {
-        final activeSpace = profile.activeSpace;
-        if (activeSpace == null) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Text(
-                'Add a family member from the top to get started.',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
-        }
+    return Consumer<DocumentNotifier>(
+      builder: (context, _, __) {
         return RefreshIndicator(
           onRefresh: () async {
             await _refreshStorage();
@@ -154,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
-              // ─── Greeting banner ───────────────────────────────────
+              // ─── Greeting banner ─────────────────────────────────────
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -165,7 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${_greeting()}, ${activeSpace.name} 👋',
+                      '${_greeting()} 👋',
                       style: GoogleFonts.nunito(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
@@ -195,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ─── Hero action buttons ───────────────────────────────
+              // ─── Hero action buttons ─────────────────────────────────
               Row(
                 children: [
                   Expanded(
@@ -203,18 +286,27 @@ class _HomeScreenState extends State<HomeScreen> {
                       key: _importKey,
                       emoji: '📥',
                       label: 'Import',
-                      onTap: _importFile,
+                      onTap: _showImportSheet,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _HeroButton(
+                      key: _scanKey,
                       emoji: '📷',
                       label: 'Scan',
                       onTap: _scanCamera,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _HeroButton(
+                      emoji: '📝',
+                      label: 'Note',
+                      onTap: _newNote,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _HeroButton(
                       key: _findKey,
@@ -225,75 +317,41 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
-              // ─── Expiring soon strip ───────────────────────────────
+              // ─── Expiring soon strip ─────────────────────────────────
               FutureBuilder<List<Document>>(
-                future: DatabaseService.instance.getExpiringDocuments(
-                  30,
-                  spaceId: activeSpace.id,
-                ),
+                future:
+                    DatabaseService.instance.getExpiringDocuments(30),
                 builder: (context, snap) {
                   final docs = snap.data ?? const <Document>[];
                   if (docs.isEmpty) return const SizedBox.shrink();
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _SectionHeader(
-                        title: '⚠️ Expiring Soon',
-                        action: 'See all',
-                        onAction: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ExpiringSoonScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      SizedBox(
-                        height: 92,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          itemCount: docs.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 10),
-                          itemBuilder: (_, i) => _ExpiringCard(doc: docs[i]),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                  );
+                  return _ExpiringStrip(docs: docs);
                 },
               ),
 
-              // ─── Stats row ─────────────────────────────────────────
+              const SizedBox(height: 18),
+
+              // ─── Stats row ───────────────────────────────────────────
               FutureBuilder<List<Document>>(
-                future: DatabaseService.instance.getAllDocuments(
-                  spaceId: activeSpace.id,
-                ),
+                future: DatabaseService.instance.getAllDocuments(),
                 builder: (context, snap) {
                   final docs = snap.data ?? const <Document>[];
                   return Row(
                     children: [
                       Expanded(
-                        child: _StatBox(
-                          emoji: '📄',
+                        child: _StatTile(
+                          icon: '📄',
                           value: '${docs.length}',
                           label: 'Documents',
+                          onTap: () =>
+                              OnboardingService.instance.requestActiveTab(2),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: _StatBox(
-                          emoji: '👥',
-                          value: '${profile.spaces.length}',
-                          label: 'Spaces',
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _StatBox(
-                          emoji: '💾',
+                        child: _StatTile(
+                          icon: '💾',
                           value: _formatBytes(_storageBytes),
                           label: 'Used',
                         ),
@@ -302,119 +360,97 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
 
-              // ─── Browse by category ────────────────────────────────
-              _SectionHeader(key: _categoriesKey, title: 'Browse by Category'),
+              // ─── Browse by category ──────────────────────────────────
+              Padding(
+                key: _categoriesKey,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  'Browse by category',
+                  style: GoogleFonts.nunito(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
               SizedBox(
                 height: 110,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  itemCount: kDefaultCategories.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
-                  itemBuilder: (_, i) {
-                    final c = kDefaultCategories[i];
-                    return FutureBuilder<List<Document>>(
-                      future: DatabaseService.instance.getDocumentsByCategories(
-                        CategoryService.instance.getAllDescendantIds(c.id),
-                        spaceId: activeSpace.id,
-                      ),
-                      builder: (context, snap) {
-                        final count = (snap.data ?? const []).length;
-                        return _CategoryCard(
-                          emoji: c.emoji,
-                          name: c.name,
-                          count: count,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    CategoryDetailScreen(category: c),
-                              ),
-                            );
-                          },
-                        );
-                      },
+                child: Consumer<CategoryService>(
+                  builder: (context, cats, _) {
+                    final roots = cats.rootCategories;
+                    return ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: roots.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 10),
+                      itemBuilder: (_, i) => _CategoryTile(cat: roots[i]),
                     );
                   },
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
 
-              // ─── Recently added ────────────────────────────────────
-              const _SectionHeader(title: 'Recently Added'),
+              // ─── Recently added ──────────────────────────────────────
               FutureBuilder<List<Document>>(
-                future: DatabaseService.instance
-                    .getAllDocuments(spaceId: activeSpace.id),
+                future: DatabaseService.instance.getAllDocuments(),
                 builder: (context, snap) {
-                  final all = snap.data ?? const <Document>[];
-                  final recent = all.take(8).toList();
-                  if (recent.isEmpty) {
-                    return _EmptyHint(
-                      emoji: '📂',
-                      message:
-                          'No documents yet. Tap Import to add your first one.',
-                    );
-                  }
+                  final docs = (snap.data ?? const <Document>[]).take(8).toList();
+                  if (docs.isEmpty) return _EmptyHomeHint(onImport: _showImportSheet);
                   return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (final d in recent)
-                        _DocRow(
-                          doc: d,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => DocumentViewerScreen(doc: d),
-                              ),
-                            );
-                          },
+                      Text(
+                        'Recently added',
+                        style: GoogleFonts.nunito(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
                         ),
+                      ),
+                      const SizedBox(height: 10),
+                      ...docs.map((d) => _DocRow(doc: d)),
                     ],
                   );
                 },
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 22),
 
-              // ─── Bookmarked ────────────────────────────────────────
+              // ─── Bookmarked ──────────────────────────────────────────
               FutureBuilder<List<Document>>(
-                future: DatabaseService.instance
-                    .getBookmarkedDocuments(spaceId: activeSpace.id),
+                future: DatabaseService.instance.getBookmarkedDocuments(),
                 builder: (context, snap) {
-                  final marks = snap.data ?? const <Document>[];
-                  if (marks.isEmpty) return const SizedBox.shrink();
+                  final docs = snap.data ?? const <Document>[];
+                  if (docs.isEmpty) return const SizedBox.shrink();
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _SectionHeader(title: 'Bookmarked ⭐'),
+                      Text(
+                        'Bookmarked',
+                        style: GoogleFonts.nunito(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
                       SizedBox(
-                        height: 92,
+                        height: 84,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          itemCount: marks.length,
+                          itemCount: docs.length,
                           separatorBuilder: (_, __) => const SizedBox(width: 10),
-                          itemBuilder: (_, i) {
-                            final d = marks[i];
-                            return _BookmarkCard(
-                              doc: d,
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        DocumentViewerScreen(doc: d),
-                                  ),
-                                );
-                              },
-                            );
-                          },
+                          itemBuilder: (_, i) => _BookmarkChip(doc: docs[i]),
                         ),
                       ),
                     ],
                   );
                 },
               ),
+
+              const SizedBox(height: 28),
+
+              // ─── Support the developer (bottom of home) ──────────────
+              const SupportDeveloperButton(),
             ],
           ),
         );
@@ -423,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ─── Pieces ──────────────────────────────────────────────────────────
+// ─── Sub-widgets ─────────────────────────────────────────────────────
 class _HeroButton extends StatelessWidget {
   const _HeroButton({
     super.key,
@@ -444,19 +480,22 @@ class _HeroButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
+          color: AppColors.primary.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.25),
+          ),
         ),
         child: Column(
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 28)),
+            Text(emoji, style: const TextStyle(fontSize: 26)),
             const SizedBox(height: 4),
             Text(
               label,
               style: GoogleFonts.nunito(
                 fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: AppColors.white,
+                fontWeight: FontWeight.w900,
+                color: AppColors.primary,
               ),
             ),
           ],
@@ -466,56 +505,23 @@ class _HeroButton extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    super.key,
-    required this.title,
-    this.action,
-    this.onAction,
-  });
-
-  final String title;
-  final String? action;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8, top: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: GoogleFonts.nunito(
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          if (action != null)
-            TextButton(onPressed: onAction, child: Text(action!)),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatBox extends StatelessWidget {
-  const _StatBox({
-    required this.emoji,
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.icon,
     required this.value,
     required this.label,
+    this.onTap,
   });
 
-  final String emoji;
+  final String icon;
   final String value;
   final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+    final content = Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
@@ -524,263 +530,216 @@ class _StatBox extends StatelessWidget {
               Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
         ),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 22)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: GoogleFonts.nunito(
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          Text(
-            label,
-            style: GoogleFonts.nunito(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({
-    required this.emoji,
-    required this.name,
-    required this.count,
-    required this.onTap,
-  });
-
-  final String emoji;
-  final String name;
-  final int count;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 130,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 28)),
-            Column(
+          Text(icon, style: const TextStyle(fontSize: 22)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
+                  value,
                   style: GoogleFonts.nunito(
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.w900,
-                    color: AppColors.white,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '$count document${count == 1 ? '' : 's'}',
+                  label,
                   style: GoogleFonts.nunito(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.white.withValues(alpha: 0.78),
+                    color: AppColors.gray,
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          if (onTap != null)
+            const Icon(Icons.chevron_right, size: 18, color: AppColors.gray),
+        ],
       ),
     );
-  }
-}
-
-class _DocRow extends StatelessWidget {
-  const _DocRow({required this.doc, required this.onTap});
-
-  final Document doc;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Row(
-          children: [
-            DocumentThumbnail(document: doc, size: 48),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    doc.name,
-                    style: GoogleFonts.nunito(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${doc.formattedSize} · ${doc.formattedDate}',
-                    style: GoogleFonts.nunito(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).textTheme.bodySmall?.color,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (doc.isBookmarked)
-              const Icon(Icons.star, color: AppColors.accent, size: 18),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BookmarkCard extends StatelessWidget {
-  const _BookmarkCard({required this.doc, required this.onTap});
-
-  final Document doc;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
+    if (onTap == null) return content;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: 140,
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: AppColors.accent.withValues(alpha: 0.4),
-          ),
-        ),
-        child: Row(
-          children: [
-            DocumentThumbnail(document: doc, size: 40),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                doc.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.nunito(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: content,
     );
   }
 }
 
-class _ExpiringCard extends StatelessWidget {
-  const _ExpiringCard({required this.doc});
-
-  final Document doc;
-
-  Color _chipColor() {
-    final d = doc.daysUntilExpiry;
-    if (d == null) return AppColors.gray;
-    if (d < 0) return AppColors.danger;
-    if (d <= 7) return AppColors.danger;
-    if (d <= 30) return AppColors.warning;
-    return AppColors.success;
-  }
-
-  String _chipLabel() {
-    final d = doc.daysUntilExpiry;
-    if (d == null) return '';
-    if (d < 0) return 'Expired ${-d}d ago';
-    if (d == 0) return 'Expires today';
-    return 'In ${d}d';
-  }
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({required this.cat});
+  final dynamic cat;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
         Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => CategoryDetailScreen(category: cat),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: FutureBuilder<int>(
+        future: DatabaseService.instance.countDocumentsInCategory(cat.id as String),
+        builder: (context, snap) {
+          final count = snap.data ?? 0;
+          return Container(
+            width: 130,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  cat.emoji as String,
+                  style: const TextStyle(fontSize: 28),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      cat.name as String,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.nunito(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.white,
+                      ),
+                    ),
+                    Text(
+                      '$count file${count == 1 ? '' : 's'}',
+                      style: GoogleFonts.nunito(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.white.withValues(alpha: 0.78),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DocRow extends StatelessWidget {
+  const _DocRow({required this.doc});
+  final Document doc;
+
+  @override
+  Widget build(BuildContext context) {
+    final crumb = CategoryService.instance
+        .getBreadcrumb(doc.categoryId)
+        .map((c) => c.name)
+        .join(' / ');
+    return ListTile(
+      leading: DocumentThumbnail(document: doc, size: 44),
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+        doc.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: GoogleFonts.nunito(fontWeight: FontWeight.w800),
+      ),
+      subtitle: Text(
+        crumb,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: GoogleFonts.nunito(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AppColors.gray,
+        ),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (doc.isBookmarked)
+            const Padding(
+              padding: EdgeInsets.only(right: 4),
+              child: Icon(Icons.bookmark,
+                  color: AppColors.accent, size: 18),
+            ),
+          IconButton(
+            tooltip: 'Share',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.ios_share, size: 20),
+            onPressed: () => shareDocument(context, doc),
+          ),
+        ],
+      ),
+      onTap: () {
+        Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => DocumentViewerScreen(doc: doc)),
         );
       },
+    );
+  }
+}
+
+class _BookmarkChip extends StatelessWidget {
+  const _BookmarkChip({required this.doc});
+  final Document doc;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => DocumentViewerScreen(doc: doc)),
+      ),
       borderRadius: BorderRadius.circular(14),
       child: Container(
         width: 200,
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: AppColors.accent.withValues(alpha: 0.16),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: _chipColor().withValues(alpha: 0.5),
-          ),
         ),
         child: Row(
           children: [
-            DocumentThumbnail(document: doc, size: 48),
+            DocumentThumbnail(document: doc, size: 44),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     doc.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.nunito(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: GoogleFonts.nunito(fontWeight: FontWeight.w800),
                   ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: _chipColor().withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _chipLabel(),
-                      style: GoogleFonts.nunito(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: _chipColor(),
-                      ),
+                  Text(
+                    doc.formattedDate,
+                    style: GoogleFonts.nunito(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.gray,
                     ),
                   ),
                 ],
               ),
+            ),
+            IconButton(
+              tooltip: 'Share',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.ios_share, size: 20),
+              onPressed: () => shareDocument(context, doc),
             ),
           ],
         ),
@@ -789,28 +748,128 @@ class _ExpiringCard extends StatelessWidget {
   }
 }
 
-class _EmptyHint extends StatelessWidget {
-  const _EmptyHint({required this.emoji, required this.message});
+class _ExpiringStrip extends StatelessWidget {
+  const _ExpiringStrip({required this.docs});
+  final List<Document> docs;
 
-  final String emoji;
-  final String message;
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              '⚠️ Expiring soon',
+              style: GoogleFonts.nunito(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const Spacer(),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ExpiringSoonScreen(),
+                  ),
+                );
+              },
+              child: const Text('See all'),
+            ),
+          ],
+        ),
+        SizedBox(
+          height: 80,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: docs.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (_, i) {
+              final d = docs[i];
+              final days = d.daysUntilExpiry ?? 0;
+              return InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => DocumentViewerScreen(doc: d),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: 220,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('⏰', style: TextStyle(fontSize: 22)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              d.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.nunito(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              days < 0
+                                  ? 'Expired ${-days}d ago'
+                                  : 'In $days days',
+                              style: GoogleFonts.nunito(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.warning,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyHomeHint extends StatelessWidget {
+  const _EmptyHomeHint({required this.onImport});
+  final VoidCallback onImport;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 22)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: GoogleFonts.nunito(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).textTheme.bodySmall?.color,
-              ),
+          Text(
+            'Nothing here yet 📭',
+            style: GoogleFonts.nunito(
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            "Tap Import above, or share any file from another app into DocShelf.",
+            style: GoogleFonts.nunito(
+              fontWeight: FontWeight.w500,
+              color: AppColors.gray,
             ),
           ),
         ],

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:pdfx/pdfx.dart';
@@ -13,7 +14,9 @@ import '../services/database_service.dart';
 import '../services/document_notifier.dart';
 import '../services/file_storage_service.dart';
 import '../utils/app_colors.dart';
+import '../utils/note_format.dart';
 import 'document_properties_screen.dart';
+import 'note_editor_screen.dart';
 
 class DocumentViewerScreen extends StatefulWidget {
   const DocumentViewerScreen({super.key, required this.doc});
@@ -298,6 +301,12 @@ class _VideoViewerState extends State<_VideoViewer> {
   }
 }
 
+/// Read-only note view inside the document viewer. The "Edit" button
+/// pushes the full-screen [NoteEditorScreen] — keeping a single canonical
+/// edit path means fewer save/discard bugs.
+///
+/// On return from the editor we reload the file off disk so the viewer
+/// reflects any changes the editor wrote.
 class _NoteViewer extends StatefulWidget {
   const _NoteViewer({required this.doc});
   final Document doc;
@@ -307,37 +316,204 @@ class _NoteViewer extends StatefulWidget {
 }
 
 class _NoteViewerState extends State<_NoteViewer> {
-  late final TextEditingController _ctrl;
-  bool _dirty = false;
+  String _markdown = '';
+  NoteMeta _meta = const NoteMeta();
+  bool _loaded = false;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = TextEditingController(
-      text: File(widget.doc.path).readAsStringSync(),
-    );
+    _reload();
   }
 
-  @override
-  void dispose() {
-    if (_dirty) {
-      File(widget.doc.path).writeAsStringSync(_ctrl.text);
-    }
-    _ctrl.dispose();
-    super.dispose();
+  void _reload() {
+    String raw = '';
+    try {
+      raw = File(widget.doc.path).readAsStringSync();
+    } catch (_) {/* unreadable */}
+    final parsed = NoteFormat.parse(raw);
+    if (!mounted) return;
+    setState(() {
+      _markdown = parsed.body;
+      _meta = parsed.meta;
+      _loaded = true;
+    });
+  }
+
+  String get _plain => _markdown
+      .replaceAll(RegExp(r'^#+\s*', multiLine: true), '')
+      .replaceAll(RegExp(r'\*\*([^*]+)\*\*'), r'$1')
+      .replaceAll(RegExp(r'\*([^*]+)\*'), r'$1')
+      .replaceAll(RegExp(r'<mark>([^<]+)</mark>'), r'$1')
+      .replaceAll(RegExp(r'^\s*[-*>]\s+', multiLine: true), '');
+
+  Future<void> _openEditor() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NoteEditorScreen(existingDoc: widget.doc),
+      ),
+    );
+    if (mounted) _reload();
+  }
+
+  int get _wordCount {
+    final t = _plain.trim();
+    if (t.isEmpty) return 0;
+    return t.split(RegExp(r'\s+')).length;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: TextField(
-        controller: _ctrl,
-        maxLines: null,
-        expands: true,
-        decoration: const InputDecoration(border: InputBorder.none),
-        onChanged: (_) => _dirty = true,
-        textAlignVertical: TextAlignVertical.top,
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = isDark ? AppColors.noteBgDark : AppColors.noteBgLight;
+    final pageBg = _meta.bg == 0 ? colors.surface : palette[_meta.bg];
+
+    return Container(
+      color: pageBg,
+      child: Column(
+        children: [
+          // ─── Toolbar row ───────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            color: colors.surface.withValues(alpha: 0.85),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.notes,
+                  size: 18,
+                  color: colors.onSurface.withValues(alpha: 0.7),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Reading',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                    color: colors.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const Spacer(),
+                FilledButton.tonalIcon(
+                  onPressed: _openEditor,
+                  icon: const Icon(Icons.edit, size: 16),
+                  label: const Text('Edit'),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+
+          // ─── Markdown body (read-only) ─────────────────────────────
+          Expanded(
+            child: !_loaded
+                ? const Center(child: CircularProgressIndicator())
+                : _markdown.trim().isEmpty
+                    ? Center(
+                        child: Text(
+                          '(empty note — tap Edit to write something)',
+                          style: GoogleFonts.nunito(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: colors.onSurface
+                                .withValues(alpha: 0.45),
+                          ),
+                        ),
+                      )
+                    : Markdown(
+                        data: NoteFormat.renderable(_markdown),
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                        selectable: true,
+                        styleSheet: MarkdownStyleSheet(
+                          p: GoogleFonts.nunito(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            height: 1.55,
+                            color: colors.onSurface,
+                          ),
+                          h1: GoogleFonts.nunito(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            color: colors.onSurface,
+                          ),
+                          h2: GoogleFonts.nunito(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: colors.onSurface,
+                          ),
+                          h3: GoogleFonts.nunito(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            color: colors.onSurface,
+                          ),
+                          strong: GoogleFonts.nunito(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: colors.onSurface,
+                          ),
+                          em: GoogleFonts.nunito(
+                            fontSize: 15,
+                            fontStyle: FontStyle.italic,
+                            color: colors.onSurface,
+                          ),
+                          blockquote: GoogleFonts.nunito(
+                            fontSize: 15,
+                            fontStyle: FontStyle.italic,
+                            color: colors.onSurface
+                                .withValues(alpha: 0.7),
+                          ),
+                          blockquoteDecoration: BoxDecoration(
+                            border: Border(
+                              left: BorderSide(
+                                color: AppColors.primary
+                                    .withValues(alpha: 0.6),
+                                width: 4,
+                              ),
+                            ),
+                          ),
+                          blockquotePadding:
+                              const EdgeInsets.fromLTRB(12, 4, 4, 4),
+                          code: GoogleFonts.firaCode(
+                            fontSize: 13,
+                            backgroundColor: colors.onSurface
+                                .withValues(alpha: 0.08),
+                          ),
+                          listBullet: GoogleFonts.nunito(
+                            fontSize: 15,
+                            color: colors.onSurface,
+                          ),
+                        ),
+                      ),
+          ),
+
+          // ─── Footer ────────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: colors.surface.withValues(alpha: 0.85),
+            child: Row(
+              children: [
+                Text(
+                  '$_wordCount word${_wordCount == 1 ? '' : 's'}',
+                  style: GoogleFonts.nunito(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '${_plain.length} char${_plain.length == 1 ? '' : 's'}',
+                  style: GoogleFonts.nunito(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Data Extraction Rules for Android 12+ (API 31+).
+    Covers two transports: cloud-backup AND device-to-device transfer
+    (Samsung Smart Switch / Google's "transfer to new phone" flow).
+
+    DocShelf opts out of both — see backup_rules.xml for the rationale.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" />
+        <exclude domain="database" />
+        <exclude domain="file" />
+        <exclude domain="external" />
+        <exclude domain="root" />
+    </cloud-backup>
+
+    <device-transfer>
+        <exclude domain="sharedpref" />
+        <exclude domain="database" />
+        <exclude domain="file" />
+        <exclude domain="external" />
+        <exclude domain="root" />
+    </device-transfer>
+</data-extraction-rules>

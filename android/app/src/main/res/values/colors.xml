@@ -2,4 +2,5 @@
 <resources>
     <color name="docshelf_indigo">#FF3D5AFE</color>
     <color name="docshelf_amber">#FFFFB300</color>
+	<color name="ic_launcher_background">#3D5AFE</color>
 </resources>

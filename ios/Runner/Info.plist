@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>DocShelf</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>DocShelf</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+
+	<!-- ─── Permission usage strings (App-Store-safe, action-oriented) ─── -->
+	<!-- Apple rejects vague strings like "needed for app to work". Each
+	     entry below names the user-facing feature that triggers it and
+	     promises what we do NOT do with the data. -->
+
+	<key>NSCameraUsageDescription</key>
+	<string>DocShelf uses your camera only when you tap "Scan" to capture a paper document. Edge detection, perspective correction, and image enhancement happen entirely on your device. No photos leave your phone.</string>
+
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>DocShelf needs access to your Photos so you can pick existing images (passport scans, receipts, etc.) and file them into your document vault. We never upload, copy, or analyse other photos.</string>
+
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>DocShelf saves scanned documents to your Photos only when you choose to export them.</string>
+
+	<key>NSMicrophoneUsageDescription</key>
+	<string>DocShelf records audio only when you tap the audio-note button to capture a voice note alongside a document. Recordings are stored locally on your device — never uploaded.</string>
+
+	<key>NSCalendarsUsageDescription</key>
+	<string>DocShelf adds an event to your calendar when you set an expiry date on a document (passport renewal, insurance, lease, etc.) so the system reminds you on time. We do not read your existing calendar.</string>
+
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>DocShelf needs to read and save files in your Documents folder so you can organise PDFs, images, and notes inside the app.</string>
+
+	<key>NSFaceIDUsageDescription</key>
+	<string>DocShelf does not use Face ID. (Reserved for a future optional app-lock feature.)</string>
+
+	<!-- ─── Sharing into DocShelf from other apps ─────────────────── -->
+	<!-- Lets users tap Share → DocShelf in any other app to import a
+	     file. Maps to receive_sharing_intent + open_filex. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Document</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.content</string>
+				<string>public.data</string>
+				<string>public.image</string>
+				<string>public.movie</string>
+				<string>public.audio</string>
+				<string>public.text</string>
+				<string>public.pdf</string>
+				<string>com.adobe.pdf</string>
+				<string>com.microsoft.word.doc</string>
+				<string>org.openxmlformats.wordprocessingml.document</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- ─── App Transport Security ─────────────────────────────────── -->
+	<!-- DocShelf has no server. The only outbound calls are user-tapped
+	     external links (Privacy Policy, Rate the app, mailto). Default
+	     ATS suffices — no exceptions added. -->
+
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<!-- ─── Privacy Manifest pointer (Apple requires from May 2024) ─── -->
+	<!-- The actual NSPrivacyAccessedAPITypes / NSPrivacyTracking keys
+	     live in ios/Runner/PrivacyInfo.xcprivacy (created below). -->
+</dict>
+</plist>

@@ -1,4 +1,4 @@
-package com.docshelf.docshelf
+package com.docshelf.myapp
 
 import io.flutter.embedding.android.FlutterActivity
 

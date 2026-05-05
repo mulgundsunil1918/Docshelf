@@ -44,13 +44,36 @@ android/app/debug/
 android/app/profile/
 android/app/release/
 
-# Signing — NEVER commit
+# Signing & secrets — NEVER commit
 key.properties
 android/key.properties
 *.jks
 *.keystore
 docshelf-release.jks
 docshelf-upload.jks
+*-keystore.jks
+*-keystore.properties
+
+# Firebase / GCP service-account credentials (defensive — DocShelf has
+# no Firebase today, but listing here so future contributors don't
+# leak anything if they wire it in)
+google-services.json
+GoogleService-Info.plist
+serviceAccountKey*.json
+firebase-adminsdk*.json
+.firebase/
+
+# Environment / secrets files
+.env
+.env.*
+*.env
+secrets.json
+secrets.yaml
+.secrets/
+
+# Marketing asset pack — regenerable via tools/play_assets.py
+play-assets/
+play-assets.zip
 
 # iOS / macOS
 **/ios/Flutter/Flutter.framework

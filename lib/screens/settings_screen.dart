@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -6,13 +8,16 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../main.dart';
+import '../services/category_service.dart';
+import '../services/document_notifier.dart';
 import '../services/file_storage_service.dart';
 import '../services/onboarding_service.dart';
-import '../services/profile_service.dart';
+import '../services/review_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/constants.dart';
+import '../widgets/support_developer_button.dart';
 import 'about_screen.dart';
-import 'manage_spaces_screen.dart';
+import 'faq_screen.dart';
 import 'tutorial_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -58,39 +63,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeNotifier>();
-    final activeSpace = context.watch<ProfileService>().activeSpace;
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
-          // ─── Spaces ─────────────────────────────────────────────────
-          _Section(title: '🪐  Spaces', children: [
-            ListTile(
-              leading: CircleAvatar(
-                backgroundColor: AppColors.primary.withValues(alpha: 0.16),
-                child: Text(activeSpace?.avatar ?? '👤',
-                    style: const TextStyle(fontSize: 22)),
-              ),
-              title: Text(activeSpace?.name ?? '—'),
-              subtitle: Text(activeSpace?.type.label ?? 'Active Space'),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ManageSpacesScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.workspaces_outline),
-              title: const Text('Manage Spaces'),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ManageSpacesScreen()),
-                );
-              },
-            ),
-          ]),
-
           // ─── Reminders ──────────────────────────────────────────────
           _Section(title: '⏰  Reminders', children: [
             ListTile(
@@ -127,13 +104,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ListTile(
               leading: const Icon(Icons.replay_outlined),
               title: const Text('Replay walkthrough'),
-              onTap: () async {
-                await OnboardingService.instance.resetCoachMarks();
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Coach marks will replay on Home.'),
+              subtitle: const Text(
+                'Tap to switch to Home and re-show the coach marks.',
+              ),
+              onTap: _replayWalkthrough,
+            ),
+          ]),
+
+          // ─── Folders ────────────────────────────────────────────────
+          _Section(title: '🗂️  Folders', children: [
+            Consumer<CategoryService>(
+              builder: (context, cats, _) {
+                final hiddenCount = cats.hiddenDefaults.length;
+                return ListTile(
+                  leading: const Icon(Icons.restore_outlined),
+                  title: const Text('Restore default folders'),
+                  subtitle: Text(
+                    hiddenCount == 0
+                        ? "Bring back any built-in folders you've deleted."
+                        : "$hiddenCount built-in folder${hiddenCount == 1 ? '' : 's'} currently hidden — tap to restore.",
                   ),
+                  enabled: hiddenCount > 0,
+                  onTap: hiddenCount == 0 ? null : _restoreDefaults,
                 );
               },
             ),
@@ -154,6 +146,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.help_outline),
+              title: const Text('Help & FAQs'),
+              subtitle: const Text('14 quick answers, all offline'),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const FaqScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.import_export_outlined),
               title: const Text('How to import'),
               onTap: _showHowToImport,
             ),
@@ -184,23 +186,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ]),
 
+          // ─── Support ────────────────────────────────────────────────
+          _Section(title: '❤️  Support', children: const [
+            SupportDeveloperButton(compact: true),
+          ]),
+
           // ─── Feedback ───────────────────────────────────────────────
           _Section(title: '💬  Feedback', children: [
             ListTile(
               leading: const Icon(Icons.email_outlined),
               title: const Text('Send feedback'),
-              onTap: () => launchUrl(
-                Uri.parse(
-                    'mailto:${AppConstants.supportEmail}?subject=DocShelf%20feedback'),
-              ),
+              onTap: () => _mailto('DocShelf feedback'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.lightbulb_outline),
+              title: const Text('Suggest a feature'),
+              onTap: () => _mailto('DocShelf — feature request'),
             ),
             ListTile(
               leading: const Icon(Icons.bug_report_outlined),
               title: const Text('Report a bug'),
-              onTap: () => launchUrl(
-                Uri.parse(
-                    'mailto:${AppConstants.supportEmail}?subject=DocShelf%20bug%20report'),
-              ),
+              onTap: _reportBug,
             ),
             ListTile(
               leading: const Icon(Icons.share_outlined),
@@ -212,7 +218,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ListTile(
               leading: const Icon(Icons.star_outline),
               title: const Text('Rate the app'),
-              onTap: () => launchUrl(Uri.parse(AppConstants.playStoreUrl)),
+              onTap: () => ReviewService.instance.requestExplicit(),
             ),
           ]),
 
@@ -227,17 +233,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 16),
           Center(
-            child: Column(
-              children: [
-                Text(
-                  'Built in India, made for the world ❤️',
-                  style: GoogleFonts.nunito(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.gray,
-                  ),
-                ),
-              ],
+            child: Text(
+              'Built in India, made for the world ❤️',
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: AppColors.gray,
+              ),
             ),
           ),
         ],
@@ -270,6 +272,92 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Brings back any built-in folders the user has hidden via Library →
+  /// Edit → Delete. Documents that had moved to Other / Unsorted stay
+  /// where they are — we can't trace which ones came from where.
+  Future<void> _restoreDefaults() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Restore default folders?'),
+        content: const Text(
+          'All built-in folders will reappear in your Library. '
+          'Documents currently in Other / Unsorted stay there — DocShelf '
+          'cannot tell which ones came from which folder.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await CategoryService.instance.restoreAllDefaults();
+    DocumentNotifier.instance.notifyDocumentChanged();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Default folders restored ✓')),
+    );
+  }
+
+  /// Resets the coach-marks-seen flag, switches to the Home tab, and
+  /// fires the replay signal so HomeScreen actually re-shows the overlay.
+  Future<void> _replayWalkthrough() async {
+    await OnboardingService.instance.resetCoachMarks();
+    OnboardingService.instance.requestCoachMarkReplay();
+    OnboardingService.instance.requestActiveTab(0);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Walkthrough restarting on Home…')),
+    );
+  }
+
+  /// Builds a `mailto:` URI with subject + body properly query-encoded
+  /// via `Uri.encodeQueryComponent` (Uri's default encoder converts
+  /// spaces to '+', which some mail clients fail to round-trip).
+  Uri _buildMailto({required String subject, String? body}) {
+    final params = <String>['subject=${Uri.encodeQueryComponent(subject)}'];
+    if (body != null) {
+      params.add('body=${Uri.encodeQueryComponent(body)}');
+    }
+    return Uri.parse(
+      'mailto:${AppConstants.supportEmail}?${params.join('&')}',
+    );
+  }
+
+  Future<void> _mailto(String subject) async {
+    await launchUrl(
+      _buildMailto(subject: subject),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  /// Bug-report mailto with version + platform pre-filled in the body
+  /// — saves a back-and-forth with the user later.
+  Future<void> _reportBug() async {
+    final platformLine = Platform.isAndroid
+        ? 'Android ${Platform.operatingSystemVersion}'
+        : Platform.operatingSystem;
+    final body = '''
+[Describe the bug here]
+
+
+───── Auto-included ─────
+App version: $_version
+Platform: $platformLine
+''';
+    await launchUrl(
+      _buildMailto(subject: 'DocShelf — bug report', body: body),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
   void _showHowToImport() {
     showDialog<void>(
       context: context,
@@ -277,10 +365,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('How to import'),
         content: const SingleChildScrollView(
           child: Text(
-            '1) Tap "Import" on Home, pick any file.\n\n'
+            '1) Tap "Import" on Home — pick a single file, multiple files, or an entire folder.\n\n'
             '2) From WhatsApp/Gmail/Drive: tap a file → Share → DocShelf.\n\n'
-            '3) Tap "Find on device" to scan WhatsApp/Telegram/Downloads for stuff you already have.\n\n'
-            '4) Bulk-import a whole folder via the Library "+" → batch import.',
+            '3) Tap "Find" to scan WhatsApp/Telegram/Downloads/Documents for files you already have.\n\n'
+            '4) Tap "Scan" to capture a paper document with your camera — auto-cropped and enhanced like a scanner.',
           ),
         ),
         actions: [

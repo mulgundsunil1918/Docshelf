@@ -4,12 +4,12 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/document.dart';
-import '../models/space.dart';
 import '../utils/constants.dart';
 import 'database_service.dart';
 
 /// Manages the on-disk DocShelf vault under
-/// `/storage/emulated/0/DocShelf/<SpaceName>/<Cat1>/<Cat2>/...`.
+/// `/storage/emulated/0/DocShelf/<Cat1>/<Cat2>/...` so users can browse
+/// the same folders from any file manager.
 class FileStorageService {
   static final FileStorageService instance = FileStorageService._();
   FileStorageService._();
@@ -17,8 +17,10 @@ class FileStorageService {
   // ─── Paths ──────────────────────────────────────────────────────────
   Future<String> get rootDir async {
     if (Platform.isAndroid) {
-      // /storage/emulated/0/DocShelf
-      final external = Directory('/storage/emulated/0/${AppConstants.storageRoot}');
+      // Top-level visible folder. Requires MANAGE_EXTERNAL_STORAGE on
+      // Android 11+; users grant this once via Settings.
+      final external =
+          Directory('/storage/emulated/0/${AppConstants.storageRoot}');
       if (!external.existsSync()) {
         try {
           external.createSync(recursive: true);
@@ -42,23 +44,12 @@ class FileStorageService {
     return DatabaseService.instance.getCategoryPathNames(categoryId);
   }
 
-  Future<String> _spaceSegment(Space? space) async {
-    if (space == null) return '';
-    return sanitizeName(space.safeName);
-  }
-
-  /// Builds an absolute folder path for the given category + space.
-  Future<String> ensureCategoryDir({
-    required String categoryId,
-    Space? space,
-  }) async {
+  /// Builds an absolute folder path for the given category.
+  Future<String> ensureCategoryDir({required String categoryId}) async {
     final root = await rootDir;
-    final spaceSeg = await _spaceSegment(space);
     final segs = await _categoryPathSegments(categoryId);
     final cleaned = segs.map(sanitizeName).toList();
-    final full = spaceSeg.isEmpty
-        ? p.joinAll([root, ...cleaned])
-        : p.joinAll([root, spaceSeg, ...cleaned]);
+    final full = p.joinAll([root, ...cleaned]);
     final dir = Directory(full);
     if (!dir.existsSync()) dir.createSync(recursive: true);
     return full;
@@ -68,7 +59,6 @@ class FileStorageService {
   Future<Document> storeDocument({
     required String sourcePath,
     required String categoryId,
-    required Space space,
     String? customName,
     DateTime? expiryDate,
     int reminderDays = 30,
@@ -83,7 +73,7 @@ class FileStorageService {
         ? customName!.trim()
         : p.basename(sourcePath);
     final name = sanitizeName(originalName);
-    final dir = await ensureCategoryDir(categoryId: categoryId, space: space);
+    final dir = await ensureCategoryDir(categoryId: categoryId);
     final destPath = _uniqueDest(p.join(dir, name));
     final dest = await src.copy(destPath);
     final size = dest.lengthSync();
@@ -92,7 +82,6 @@ class FileStorageService {
       name: p.basenameWithoutExtension(destPath),
       path: dest.path,
       categoryId: categoryId,
-      spaceId: space.id,
       fileType: Document.typeFromExtension(ext),
       sizeBytes: size,
       savedAt: DateTime.now(),
@@ -107,10 +96,10 @@ class FileStorageService {
     required String title,
     required String content,
     required String categoryId,
-    required Space space,
   }) async {
-    final dir = await ensureCategoryDir(categoryId: categoryId, space: space);
-    final fileName = '${sanitizeName(title.isEmpty ? 'Untitled note' : title)}.txt';
+    final dir = await ensureCategoryDir(categoryId: categoryId);
+    final fileName =
+        '${sanitizeName(title.isEmpty ? 'Untitled note' : title)}.txt';
     final destPath = _uniqueDest(p.join(dir, fileName));
     final f = await File(destPath).writeAsString(content);
     final size = f.lengthSync();
@@ -118,7 +107,6 @@ class FileStorageService {
       name: p.basenameWithoutExtension(destPath),
       path: f.path,
       categoryId: categoryId,
-      spaceId: space.id,
       fileType: DocFileType.note,
       sizeBytes: size,
       savedAt: DateTime.now(),
@@ -129,12 +117,8 @@ class FileStorageService {
   Future<Document> moveDocument(
     Document doc, {
     required String newCategoryId,
-    Space? newSpace,
   }) async {
-    final destDir = await ensureCategoryDir(
-      categoryId: newCategoryId,
-      space: newSpace,
-    );
+    final destDir = await ensureCategoryDir(categoryId: newCategoryId);
     final fileName = p.basename(doc.path);
     final destPath = _uniqueDest(p.join(destDir, fileName));
     final src = File(doc.path);
@@ -149,7 +133,6 @@ class FileStorageService {
     return doc.copyWith(
       path: moved.path,
       categoryId: newCategoryId,
-      spaceId: newSpace?.id ?? doc.spaceId,
     );
   }
 
@@ -164,18 +147,12 @@ class FileStorageService {
     return !f.existsSync();
   }
 
-  Future<void> deleteCategoryDir({
-    required String categoryId,
-    Space? space,
-  }) async {
+  Future<void> deleteCategoryDir({required String categoryId}) async {
     final root = await rootDir;
-    final spaceSeg = await _spaceSegment(space);
     final segs = await _categoryPathSegments(categoryId);
     if (segs.isEmpty) return;
     final cleaned = segs.map(sanitizeName).toList();
-    final full = spaceSeg.isEmpty
-        ? p.joinAll([root, ...cleaned])
-        : p.joinAll([root, spaceSeg, ...cleaned]);
+    final full = p.joinAll([root, ...cleaned]);
     final dir = Directory(full);
     if (dir.existsSync()) {
       try {
@@ -184,32 +161,37 @@ class FileStorageService {
     }
   }
 
-  // ─── Stats ──────────────────────────────────────────────────────────
+  // ─── Utility ────────────────────────────────────────────────────────
+  String _uniqueDest(String desired) {
+    final f = File(desired);
+    if (!f.existsSync()) return desired;
+    final dir = p.dirname(desired);
+    final stem = p.basenameWithoutExtension(desired);
+    final ext = p.extension(desired);
+    var i = 2;
+    while (true) {
+      final candidate = p.join(dir, '$stem ($i)$ext');
+      if (!File(candidate).existsSync()) return candidate;
+      i += 1;
+    }
+  }
+
   Future<int> getTotalStorageUsed() async {
-    final dir = Directory(await rootDir);
+    final root = await rootDir;
+    final dir = Directory(root);
     if (!dir.existsSync()) return 0;
-    var sum = 0;
+    var total = 0;
     try {
-      await for (final e in dir.list(recursive: true, followLinks: false)) {
-        if (e is File) sum += e.lengthSync();
+      await for (final entity in dir.list(recursive: true, followLinks: false)) {
+        if (entity is File) {
+          try {
+            total += await entity.length();
+          } catch (_) {}
+        }
       }
-    } catch (_) {/* ignore unreadable nodes */}
-    return sum;
+    } catch (_) {}
+    return total;
   }
 
   bool fileExists(String path) => File(path).existsSync();
-
-  // ─── Internals ──────────────────────────────────────────────────────
-  String _uniqueDest(String path) {
-    if (!File(path).existsSync()) return path;
-    final dir = p.dirname(path);
-    final base = p.basenameWithoutExtension(path);
-    final ext = p.extension(path);
-    var i = 1;
-    while (true) {
-      final candidate = p.join(dir, '$base ($i)$ext');
-      if (!File(candidate).existsSync()) return candidate;
-      i++;
-    }
-  }
 }

@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/onboarding_service.dart';
 import '../utils/app_colors.dart';
 import 'main_shell.dart';
-import 'space_setup_screen.dart';
 import 'tutorial_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -29,10 +28,6 @@ class _SplashScreenState extends State<SplashScreen> {
     final ob = OnboardingService.instance;
     if (!await ob.hasSeenTutorial()) {
       _go(const TutorialScreen());
-      return;
-    }
-    if (!await ob.hasCompletedSpaceSetup()) {
-      _go(const SpaceSetupScreen());
       return;
     }
     _go(const MainShell());
@@ -64,51 +59,50 @@ class _SplashScreenState extends State<SplashScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          'Doc',
-                          style: GoogleFonts.nunito(
-                            fontSize: 56,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.white,
-                            height: 1,
-                          ),
+                    // ─── Doc (line 1) ─────────────────────────────────
+                    Text(
+                      'Doc',
+                      style: GoogleFonts.nunito(
+                        fontSize: 88,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.white,
+                        height: 1,
+                        letterSpacing: -2,
+                      ),
+                    )
+                        .animate()
+                        .slideY(
+                          begin: -0.4,
+                          end: 0,
+                          duration: 420.ms,
+                          curve: Curves.easeOutCubic,
                         )
-                            .animate()
-                            .slideX(
-                              begin: -0.6,
-                              end: 0,
-                              duration: 400.ms,
-                              curve: Curves.easeOutCubic,
-                            )
-                            .fadeIn(duration: 400.ms),
-                        Text(
-                          'Shelf',
-                          style: GoogleFonts.nunito(
-                            fontSize: 56,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.accent,
-                            height: 1,
-                          ),
+                        .fadeIn(duration: 420.ms),
+                    const SizedBox(height: 4),
+                    // ─── Shelf (line 2) ───────────────────────────────
+                    Text(
+                      'Shelf',
+                      style: GoogleFonts.nunito(
+                        fontSize: 88,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.accent,
+                        height: 1,
+                        letterSpacing: -2,
+                      ),
+                    )
+                        .animate()
+                        .slideY(
+                          begin: 0.4,
+                          end: 0,
+                          delay: 200.ms,
+                          duration: 420.ms,
+                          curve: Curves.easeOutCubic,
                         )
-                            .animate()
-                            .slideX(
-                              begin: 0.6,
-                              end: 0,
-                              delay: 200.ms,
-                              duration: 400.ms,
-                              curve: Curves.easeOutCubic,
-                            )
-                            .fadeIn(delay: 200.ms, duration: 400.ms),
-                      ],
-                    ),
+                        .fadeIn(delay: 200.ms, duration: 420.ms),
                     const SizedBox(height: 18),
+                    // ─── Subtle shelf accent line ─────────────────────
                     Container(
-                      width: 200,
+                      width: 160,
                       height: 3,
                       decoration: BoxDecoration(
                         color: AppColors.white.withValues(alpha: 0.85),
@@ -120,20 +114,21 @@ class _SplashScreenState extends State<SplashScreen> {
                           begin: 0,
                           end: 1,
                           delay: 700.ms,
-                          duration: 200.ms,
+                          duration: 240.ms,
                           curve: Curves.easeOutCubic,
                         )
-                        .fadeIn(delay: 700.ms, duration: 200.ms),
+                        .fadeIn(delay: 700.ms, duration: 240.ms),
                     const SizedBox(height: 14),
+                    // ─── Tagline (line 3) ─────────────────────────────
                     Text(
-                      'YOUR DOCUMENT SHELF',
+                      'FILES ORGANIZED · OFFLINE',
                       style: GoogleFonts.nunito(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: 2.0,
-                        color: AppColors.white.withValues(alpha: 0.75),
+                        letterSpacing: 4.0,
+                        color: AppColors.white.withValues(alpha: 0.78),
                       ),
-                    ).animate().fadeIn(delay: 900.ms, duration: 200.ms),
+                    ).animate().fadeIn(delay: 950.ms, duration: 260.ms),
                   ],
                 ),
               ),
@@ -150,7 +145,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       color: AppColors.white.withValues(alpha: 0.65),
                       letterSpacing: 0.4,
                     ),
-                  ).animate().fadeIn(delay: 1100.ms, duration: 300.ms),
+                  ).animate().fadeIn(delay: 1200.ms, duration: 300.ms),
                 ),
               ),
             ],

@@ -6,8 +6,9 @@ import '../models/document.dart';
 import '../services/category_service.dart';
 import '../services/database_service.dart';
 import '../services/document_notifier.dart';
-import '../services/profile_service.dart';
+
 import '../utils/app_colors.dart';
+import '../utils/document_share.dart';
 import '../widgets/document_thumbnail.dart';
 import 'document_viewer_screen.dart';
 
@@ -81,9 +82,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer3<ProfileService, DocumentNotifier, CategoryService>(
-      builder: (context, profile, _, cats, __) {
-        final activeId = profile.activeSpace?.id;
+    return Consumer2<DocumentNotifier, CategoryService>(
+      builder: (context, _, cats, __) {
         return Scaffold(
           appBar: AppBar(
             title: TextField(
@@ -133,8 +133,7 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               Expanded(
                 child: FutureBuilder<List<Document>>(
-                  future: DatabaseService.instance
-                      .getAllDocuments(spaceId: activeId),
+                  future: DatabaseService.instance.getAllDocuments(),
                   builder: (context, snap) {
                     if (snap.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -150,10 +149,10 @@ class _SearchScreenState extends State<SearchScreen> {
                       if (!_matchesQuery(d, _query, breadcrumb)) continue;
                       filtered.add(d);
                     }
-                    if (_query.isEmpty && _filter == _Filter.all) {
-                      return _StartHint();
-                    }
                     if (filtered.isEmpty) {
+                      if (_query.isEmpty && _filter == _Filter.all) {
+                        return _StartHint();
+                      }
                       return _NoMatch(query: _query);
                     }
                     return ListView.separated(
@@ -183,6 +182,12 @@ class _SearchScreenState extends State<SearchScreen> {
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                             ),
+                          ),
+                          trailing: IconButton(
+                            tooltip: 'Share',
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.ios_share, size: 20),
+                            onPressed: () => shareDocument(context, d),
                           ),
                           onTap: () {
                             Navigator.of(context).push(
@@ -215,10 +220,10 @@ class _StartHint extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('🔍', style: TextStyle(fontSize: 56)),
+            const Text('📭', style: TextStyle(fontSize: 56)),
             const SizedBox(height: 12),
             Text(
-              'Start typing to search',
+              'No documents yet',
               style: GoogleFonts.nunito(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -226,7 +231,7 @@ class _StartHint extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Searches names, descriptions, and folders.',
+              'Tap Import on Home to add files. Once you do, all your documents will appear here.',
               textAlign: TextAlign.center,
               style: GoogleFonts.nunito(
                 fontSize: 13,

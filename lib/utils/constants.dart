@@ -7,8 +7,8 @@ class AppConstants {
 
   // ─── Identity ───────────────────────────────────────────────────────
   static const String appName = 'DocShelf';
-  static const String appTagline = 'Your Document Shelf';
-  static const String packageId = 'com.docshelf.docshelf';
+  static const String appTagline = 'Files organized · Offline';
+  static const String packageId = 'com.docshelf.myapp';
 
   // ─── Storage ────────────────────────────────────────────────────────
   /// Root folder created on the device's external storage.
@@ -22,20 +22,28 @@ class AppConstants {
   /// Catch-all category when a document is moved out of a deleted category.
   static const String unsortedCategoryId = 'cat_other';
 
-  // ─── Default Space ids ──────────────────────────────────────────────
-  static const String selfSpaceId = 'self';
-
   // ─── Reminders ──────────────────────────────────────────────────────
   static const int defaultReminderDays = 30;
   static const List<int> reminderDayOptions = [7, 14, 30, 60, 90];
 
   // ─── Onboarding flag keys (SharedPreferences) ───────────────────────
-  static const String prefHasSeenTutorial = 'has_seen_tutorial';
-  static const String prefHasCompletedSpaceSetup = 'has_completed_space_setup';
-  static const String prefHasSeenCoachMarks = 'has_seen_coach_marks';
-  static const String prefActiveSpaceId = 'active_space_id';
-  static const String prefThemeMode = 'theme_mode';
-  static const String prefDefaultReminderDays = 'default_reminder_days';
+  // Each "show once" key is suffixed with a version so we can force the
+  // tutorial / coach marks to re-show after a meaningful UX change —
+  // bump the suffix here and the user sees the new version next launch
+  // even if SharedPreferences was restored from a backup.
+  static const String prefHasSeenTutorial = 'has_seen_tutorial_v1';
+  static const String prefHasSeenCoachMarks = 'has_seen_coach_marks_v1';
+  static const String prefThemeMode = 'theme_mode_v1';
+  static const String prefDefaultReminderDays = 'default_reminder_days_v1';
+  static const String prefInstalledAt = 'installed_at_v1';
+  static const String prefLastReviewPromptAt = 'last_review_prompt_at_v1';
+
+  /// IDs of default categories the user has hidden (deleted). Default
+  /// categories live in code, so "deleting" one is really hiding it +
+  /// moving its docs to Other / Unsorted. Stored as List<String> in
+  /// SharedPreferences, loaded into a Set in CategoryService.
+  static const String prefHiddenDefaultCategories =
+      'hidden_default_categories_v1';
 
   // ─── External links ─────────────────────────────────────────────────
   static const String supportEmail = 'mulgundsunil@gmail.com';
@@ -47,13 +55,8 @@ class AppConstants {
       'https://mulgundsunil1918.github.io/Docshelf/terms.html';
   static const String websiteUrl =
       'https://mulgundsunil1918.github.io/Docshelf/';
-
-  // ─── Avatars (people + contexts — DocShelf is universal) ───────────
-  static const List<String> avatarOptions = [
-    '👤', '👨', '👩', '🧑', '👨‍🦱', '👩‍🦰', '🧓', '👴', '👵', '👦', '👧',
-    '🧒', '👶', '💼', '🎓', '🏠', '🏢', '📚', '💻', '✏️', '🛠️', '🏥',
-    '🚀', '🎨', '⭐',
-  ];
+  static const String supportDeveloperUrl =
+      'https://bridgr.co.in/support?from=docshelf';
 
   // ─── Home screen tips (rotating by day-of-month) ────────────────────
   /// Universal — covers personal, work, study, finance, vehicle, project,
@@ -63,7 +66,6 @@ class AppConstants {
     '📖 The best vault is the one you actually use.',
     '🛡️ Your data never leaves this phone — that is the point.',
     '⏰ Set an expiry date on a contract or passport — DocShelf reminds you via your phone calendar.',
-    '🗂️ Spaces let you keep work, study, family, and projects separate — switch with one tap.',
     '📥 Long-press any file in WhatsApp / Drive / Gmail → Share → DocShelf → done.',
     '⭐ Bookmark documents you grab often — they show up on Home.',
     '🚗 Vehicle docs (RC, insurance, PUC) and quotes for new cars all in one place.',
@@ -71,7 +73,7 @@ class AppConstants {
     '🧾 Tax season is calmer when bank statements + ITR are tagged and dated.',
     '🏠 Sale deeds, rent agreements, property tax — never lose them in old email threads.',
     '🎓 Students: keep assignments, marksheets, and project reports per semester.',
-    '✏️ Teachers: lesson plans, syllabi, and student records in one Space per class.',
+    '✏️ Teachers: lesson plans, syllabi, and student records all in one place.',
     '✈️ Visas, tickets, hotel bookings — all expire-trackable.',
     '💼 Offer letters, NDAs, payslips, performance reviews — your career file in one folder tree.',
     '🔍 Search scans names, descriptions, AND folder paths — find anything fast.',
@@ -85,5 +87,6 @@ class AppConstants {
     '🏥 Health Insurance card — Health → Insurance, expires reminded.',
     '☕ Like DocShelf? Buy us a chai from Settings — keeps it free for everyone.',
     '🌍 DocShelf works fully offline — no account, no cloud, no tracking.',
+    '📷 Tap Scan to capture a real document with your camera — auto-cropped, perspective-fixed, ready to file.',
   ];
 }

@@ -7,17 +7,22 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import '../models/category.dart';
-import '../models/space.dart';
 import '../services/category_service.dart';
 import '../services/database_service.dart';
 import '../services/document_notifier.dart';
 import '../services/file_storage_service.dart';
-import '../services/profile_service.dart';
+import '../utils/app_colors.dart';
+import '../utils/constants.dart';
 import '../widgets/category_picker_widget.dart';
-import '../widgets/space_picker_widget.dart';
 
 class BatchImportScreen extends StatefulWidget {
-  const BatchImportScreen({super.key});
+  const BatchImportScreen({super.key, this.preloadedPaths = const []});
+
+  /// File paths supplied by the share-intent flow (or any caller that
+  /// already has paths). When non-empty, the screen opens with these
+  /// files pre-checked so the user can pick ONE folder + import them
+  /// all at once instead of going through N sequential save sheets.
+  final List<String> preloadedPaths;
 
   @override
   State<BatchImportScreen> createState() => _BatchImportScreenState();
@@ -26,14 +31,20 @@ class BatchImportScreen extends StatefulWidget {
 class _BatchImportScreenState extends State<BatchImportScreen> {
   final _files = <_PendingFile>[];
   Category? _category;
-  Space? _space;
   bool _importing = false;
   double _progress = 0;
 
   @override
   void initState() {
     super.initState();
-    _space = ProfileService.instance.activeSpace;
+    _category =
+        CategoryService.instance.getCategoryById(AppConstants.unsortedCategoryId);
+    // Pre-load any paths passed in by the share-intent handler.
+    for (final p in widget.preloadedPaths) {
+      if (p.trim().isEmpty) continue;
+      if (_files.any((x) => x.path == p)) continue;
+      _files.add(_PendingFile(path: p));
+    }
   }
 
   Future<void> _pickFiles() async {
@@ -67,7 +78,7 @@ class _BatchImportScreenState extends State<BatchImportScreen> {
   }
 
   Future<void> _import() async {
-    if (_space == null || _category == null) return;
+    if (_category == null) return;
     final selected = _files.where((f) => f.selected).toList();
     if (selected.isEmpty) return;
     setState(() {
@@ -80,7 +91,6 @@ class _BatchImportScreenState extends State<BatchImportScreen> {
         var doc = await FileStorageService.instance.storeDocument(
           sourcePath: f.path,
           categoryId: _category!.id,
-          space: _space!,
         );
         final id = await DatabaseService.instance.saveDocument(doc);
         doc = doc.copyWith(id: id);
@@ -148,13 +158,6 @@ class _BatchImportScreenState extends State<BatchImportScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SpacePickerWidget(
-              selectedId: _space?.id,
-              onChanged: (s) => setState(() => _space = s),
-            ),
-          ),
-          Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: InkWell(
               onTap: _pickCategory,
@@ -196,9 +199,31 @@ class _BatchImportScreenState extends State<BatchImportScreen> {
           Expanded(
             child: _files.isEmpty
                 ? Center(
-                    child: Text(
-                      'Pick files or a folder to begin.',
-                      style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('📂', style: TextStyle(fontSize: 56)),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Pick files or a folder to begin.',
+                            style: GoogleFonts.nunito(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'You can mix files from anywhere; we\'ll batch them in.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.gray,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   )
                 : ListView.builder(
@@ -216,15 +241,20 @@ class _BatchImportScreenState extends State<BatchImportScreen> {
                           f.path,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.nunito(
+                            fontSize: 11,
+                            color: AppColors.gray,
+                          ),
                         ),
-                        onChanged: (v) => setState(() => f.selected = v ?? false),
+                        onChanged: (v) =>
+                            setState(() => f.selected = v ?? false),
                       );
                     },
                   ),
           ),
           if (_importing)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.all(16),
               child: LinearProgressIndicator(value: _progress),
             ),
           SafeArea(
@@ -233,16 +263,16 @@ class _BatchImportScreenState extends State<BatchImportScreen> {
               padding: const EdgeInsets.all(16),
               child: SizedBox(
                 width: double.infinity,
+                height: 50,
                 child: FilledButton(
-                  onPressed: (_space != null &&
-                          _category != null &&
+                  onPressed: (_category != null &&
                           selected > 0 &&
                           !_importing)
                       ? _import
                       : null,
                   child: Text(
                     _importing
-                        ? 'Importing…'
+                        ? 'Importing… ${(_progress * 100).round()}%'
                         : 'Import $selected file${selected == 1 ? '' : 's'}',
                   ),
                 ),
@@ -257,7 +287,6 @@ class _BatchImportScreenState extends State<BatchImportScreen> {
 
 class _PendingFile {
   _PendingFile({required this.path});
-
   final String path;
   bool selected = true;
 }

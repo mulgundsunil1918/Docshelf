@@ -8,8 +8,9 @@ import '../services/calendar_service.dart';
 import '../services/category_service.dart';
 import '../services/database_service.dart';
 import '../services/document_notifier.dart';
-import '../services/profile_service.dart';
+
 import '../utils/app_colors.dart';
+import '../utils/document_share.dart';
 import '../widgets/document_thumbnail.dart';
 import 'document_viewer_screen.dart';
 
@@ -76,9 +77,8 @@ class _ExpiringSoonScreenState extends State<ExpiringSoonScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<ProfileService, DocumentNotifier>(
-      builder: (context, profile, _, __) {
-        final activeId = profile.activeSpace?.id;
+    return Consumer<DocumentNotifier>(
+      builder: (context, _, __) {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Expiring soon'),
@@ -108,7 +108,7 @@ class _ExpiringSoonScreenState extends State<ExpiringSoonScreen> {
               Expanded(
                 child: FutureBuilder<List<Document>>(
                   future: DatabaseService.instance
-                      .getExpiringDocuments(365 * 30, spaceId: activeId),
+                      .getExpiringDocuments(365 * 30),
                   builder: (context, snap) {
                     final all = snap.data ?? const <Document>[];
                     final filtered =
@@ -168,22 +168,33 @@ class _ExpiringSoonScreenState extends State<ExpiringSoonScreen> {
                               ),
                             ],
                           ),
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _chipColor(d.daysUntilExpiry)
-                                  .withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _chipLabel(d.daysUntilExpiry),
-                              style: GoogleFonts.nunito(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: _chipColor(d.daysUntilExpiry),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _chipColor(d.daysUntilExpiry)
+                                      .withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  _chipLabel(d.daysUntilExpiry),
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: _chipColor(d.daysUntilExpiry),
+                                  ),
+                                ),
                               ),
-                            ),
+                              IconButton(
+                                tooltip: 'Share',
+                                visualDensity: VisualDensity.compact,
+                                icon: const Icon(Icons.ios_share, size: 20),
+                                onPressed: () => shareDocument(context, d),
+                              ),
+                            ],
                           ),
                           onTap: () {
                             Navigator.of(context).push(

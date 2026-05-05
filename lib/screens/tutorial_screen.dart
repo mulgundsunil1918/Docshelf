@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../services/onboarding_service.dart';
 import '../utils/app_colors.dart';
-import 'space_setup_screen.dart';
+import 'main_shell.dart';
 
 class TutorialScreen extends StatefulWidget {
   const TutorialScreen({super.key, this.fromSettings = false});
@@ -23,29 +23,29 @@ class _TutorialScreenState extends State<TutorialScreen> {
     _Slide(
       headline: "Where's that contract / passport / homework / quote? 😅",
       body:
-          'Documents scattered across WhatsApp chats, Gmail, Drive, random folders. Always missing when you need them.',
-      subtext: 'DocShelf fixes that — forever.',
+          "Documents scattered across WhatsApp, Gmail, Drive, random folders. Always missing when you need them.",
+      subtext: "DocShelf fixes that — forever.",
       illustration: _IllustrationKind.messy,
     ),
     _Slide(
-      headline: 'One vault. Every document. 🗂️',
+      headline: "One vault. 14 starter folders. 🗂️",
       body:
-          'Identity, Finance, Work, Education, Health, Property, Quotes, Receipts — 14 starter folders that cover personal, professional, academic. Add your own anytime.',
-      subtext: 'Works with PDFs, images, scans, notes, anything.',
+          "Identity, Finance, Work, Education, Health, Insurance, Property, Vehicle, Quotations, Receipts, Travel — and more. Add your own folders anytime.",
+      subtext: "PDFs, images, scans, rich-text notes. Anything.",
       illustration: _IllustrationKind.categories,
     ),
     _Slide(
-      headline: 'Spaces for any context 🪐',
+      headline: "Scan & share, all on-device. 📷",
       body:
-          'Personal, family, work, side project, a class you teach — keep them separate. Each Space has its own folder tree. Switch with one tap.',
-      subtext: 'All offline. All on your device.',
+          "Tap Scan to capture any paper — auto-edge detection, perspective fixed, contrast enhanced, multi-page → single PDF. One tap to share to any app.",
+      subtext: "Like Adobe Scan, but fully offline.",
       illustration: _IllustrationKind.family,
     ),
     _Slide(
-      headline: 'Local-first. Zero cloud. 🛡️',
+      headline: "Reminded. Private. Free. 🛡️",
       body:
-          'Files stay on YOUR device. No accounts, no upload, no tracking, no ads. We literally don\'t have a server.',
-      subtext: '',
+          "Set an expiry date — DocShelf adds it to your phone calendar. Files stay on YOUR device only. No accounts, no upload, no tracking, no ads. The full source is on GitHub.",
+      subtext: "",
       illustration: _IllustrationKind.shield,
     ),
   ];
@@ -63,7 +63,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
       Navigator.of(context).pop();
     } else {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const SpaceSetupScreen()),
+        MaterialPageRoute(builder: (_) => const MainShell()),
       );
     }
   }
@@ -364,10 +364,10 @@ class _FamilyIllustration extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ppl = [
-      ('👤', 'Personal'),
-      ('💼', 'Work'),
-      ('🎓', 'Studies'),
-      ('🚀', 'Project'),
+      ('📷', 'Scan'),
+      ('✂️', 'Crop'),
+      ('🔆', 'Enhance'),
+      ('📄', 'Save'),
     ];
     return Wrap(
       alignment: WrapAlignment.center,

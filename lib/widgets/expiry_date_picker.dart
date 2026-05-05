@@ -78,12 +78,25 @@ class _ExpiryDatePickerState extends State<ExpiryDatePicker> {
                   size: 20, color: AppColors.accentDark),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  'This document has an expiry date',
-                  style: GoogleFonts.nunito(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'This document has an expiry date',
+                      style: GoogleFonts.nunito(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      '(like insurance, policy, contract, passport, license)',
+                      style: GoogleFonts.nunito(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.gray,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Switch(

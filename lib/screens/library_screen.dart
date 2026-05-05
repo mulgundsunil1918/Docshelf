@@ -3,12 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../models/category.dart';
-import '../models/document.dart';
 import '../services/category_service.dart';
 import '../services/database_service.dart';
 import '../services/document_notifier.dart';
-import '../services/profile_service.dart';
+
 import '../utils/app_colors.dart';
+import '../utils/constants.dart';
 import '../widgets/emoji_picker_button.dart';
 import 'category_detail_screen.dart';
 
@@ -56,40 +56,59 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _deleteCategory(Category c) async {
+    if (c.id == AppConstants.unsortedCategoryId) {
+      // Block on the catch-all — there's nowhere for its docs to go.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Other / Unsorted can't be deleted — it's the catch-all "
+            "where deleted folders' documents land.",
+          ),
+        ),
+      );
+      return;
+    }
+    final isDefault = !c.isCustom;
+    final descendantCount =
+        CategoryService.instance.getAllDescendantIds(c.id).length;
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: Text('Delete "${c.name}"?'),
         content: Text(
-          c.isCustom
-              ? 'Documents inside will move to Other / Unsorted. Continue?'
-              : 'Default categories cannot be deleted.',
+          isDefault
+              ? 'Documents inside (and inside any subfolders) will move '
+                  'to Other / Unsorted. The folder will be hidden — you '
+                  'can bring it back from Settings → Restore default '
+                  'folders.'
+              : 'Documents inside will move to Other / Unsorted. The '
+                  'folder${descendantCount > 1 ? ' and its $descendantCount subfolders' : ''} '
+                  'will be deleted permanently.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
-          if (c.isCustom)
-            FilledButton(
-              style:
-                  FilledButton.styleFrom(backgroundColor: AppColors.danger),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete'),
-            ),
+          FilledButton(
+            style:
+                FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(isDefault ? 'Hide folder' : 'Delete'),
+          ),
         ],
       ),
     );
     if (ok != true) return;
-    await CategoryService.instance.deleteCategory(c.id, moveDocsToOther: true);
+    await CategoryService.instance
+        .deleteCategory(c.id, moveDocsToOther: true);
     DocumentNotifier.instance.notifyDocumentChanged();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer3<CategoryService, ProfileService, DocumentNotifier>(
-      builder: (context, cats, profile, _, __) {
-        final activeId = profile.activeSpace?.id;
+    return Consumer2<CategoryService, DocumentNotifier>(
+      builder: (context, cats, _, __) {
         final roots = cats.rootCategories;
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -115,7 +134,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
           body: _grid
               ? _GridView(
                   roots: roots,
-                  activeSpaceId: activeId,
                   editMode: _editMode,
                   onRename: _renameCategory,
                   onAddSub: _addSub,
@@ -145,7 +163,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
 class _GridView extends StatelessWidget {
   const _GridView({
     required this.roots,
-    required this.activeSpaceId,
     required this.editMode,
     required this.onRename,
     required this.onAddSub,
@@ -153,7 +170,6 @@ class _GridView extends StatelessWidget {
   });
 
   final List<Category> roots;
-  final String? activeSpaceId;
   final bool editMode;
   final ValueChanged<Category> onRename;
   final ValueChanged<Category> onAddSub;
@@ -174,7 +190,6 @@ class _GridView extends StatelessWidget {
         final c = roots[i];
         return _CategoryGridCard(
           cat: c,
-          activeSpaceId: activeSpaceId,
           editMode: editMode,
           onRename: onRename,
           onAddSub: onAddSub,
@@ -188,7 +203,6 @@ class _GridView extends StatelessWidget {
 class _CategoryGridCard extends StatelessWidget {
   const _CategoryGridCard({
     required this.cat,
-    required this.activeSpaceId,
     required this.editMode,
     required this.onRename,
     required this.onAddSub,
@@ -196,7 +210,6 @@ class _CategoryGridCard extends StatelessWidget {
   });
 
   final Category cat;
-  final String? activeSpaceId;
   final bool editMode;
   final ValueChanged<Category> onRename;
   final ValueChanged<Category> onAddSub;
@@ -247,10 +260,16 @@ class _CategoryGridCard extends StatelessWidget {
                     },
                     itemBuilder: (_) => [
                       const PopupMenuItem(value: 'rename', child: Text('Rename')),
-                      const PopupMenuItem(value: 'sub', child: Text('Add subfolder')),
-                      if (cat.isCustom)
+                      const PopupMenuItem(
+                          value: 'sub', child: Text('Add subfolder')),
+                      if (cat.id != AppConstants.unsortedCategoryId)
                         const PopupMenuItem(
-                            value: 'delete', child: Text('Delete')),
+                          value: 'delete',
+                          child: Text(
+                            'Delete',
+                            style: TextStyle(color: AppColors.danger),
+                          ),
+                        ),
                     ],
                   ),
               ],
@@ -266,13 +285,12 @@ class _CategoryGridCard extends StatelessWidget {
                     color: AppColors.white,
                   ),
                 ),
-                FutureBuilder<List<Document>>(
-                  future: DatabaseService.instance.getDocumentsByCategories(
+                FutureBuilder<int>(
+                  future: DatabaseService.instance.countDocumentsInCategories(
                     CategoryService.instance.getAllDescendantIds(cat.id),
-                    spaceId: activeSpaceId,
                   ),
                   builder: (context, snap) {
-                    final n = (snap.data ?? const []).length;
+                    final n = snap.data ?? 0;
                     return Text(
                       '$n document${n == 1 ? '' : 's'}',
                       style: GoogleFonts.nunito(
@@ -348,7 +366,7 @@ class _ListView extends StatelessWidget {
                       tooltip: 'Rename',
                       onPressed: () => onRename(c),
                     ),
-                    if (c.isCustom)
+                    if (c.id != AppConstants.unsortedCategoryId)
                       IconButton(
                         icon: const Icon(Icons.delete_outline,
                             size: 20, color: AppColors.danger),

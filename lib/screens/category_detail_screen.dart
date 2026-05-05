@@ -9,12 +9,13 @@ import '../services/category_service.dart';
 import '../services/database_service.dart';
 import '../services/document_notifier.dart';
 import '../services/file_storage_service.dart';
-import '../services/profile_service.dart';
+
 import '../utils/app_colors.dart';
-import '../widgets/add_note_sheet.dart';
+import '../utils/document_share.dart';
 import '../widgets/document_thumbnail.dart';
 import '../widgets/save_document_sheet.dart';
 import 'document_viewer_screen.dart';
+import 'note_editor_screen.dart';
 
 class CategoryDetailScreen extends StatefulWidget {
   const CategoryDetailScreen({super.key, required this.category});
@@ -42,10 +43,12 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   }
 
   Future<void> _addNote() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => AddNoteSheet(initialCategoryId: widget.category.id),
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NoteEditorScreen(
+          initialCategoryId: widget.category.id,
+        ),
+      ),
     );
   }
 
@@ -101,9 +104,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer3<ProfileService, DocumentNotifier, CategoryService>(
-      builder: (context, profile, _, cats, __) {
-        final activeId = profile.activeSpace?.id;
+    return Consumer2<DocumentNotifier, CategoryService>(
+      builder: (context, _, cats, __) {
         final breadcrumb = cats.getBreadcrumb(widget.category.id);
         final breadcrumbText = breadcrumb.map((c) => c.name).join(' / ');
         final children = cats.getChildren(widget.category.id);
@@ -173,36 +175,54 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
               ),
             ],
           ),
-          body: Column(
-            children: [
-              if (children.isNotEmpty)
-                SizedBox(
-                  height: 90,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    itemCount: children.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
-                    itemBuilder: (_, i) => _SubChip(
-                      cat: children[i],
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                CategoryDetailScreen(category: children[i]),
-                          ),
-                        );
-                      },
+          body: CustomScrollView(
+            slivers: [
+              if (children.isNotEmpty) ...[
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+                  sliver: SliverToBoxAdapter(
+                    child: Text(
+                      'Subfolders',
+                      style: GoogleFonts.nunito(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.gray,
+                        letterSpacing: 0.6,
+                      ),
                     ),
                   ),
                 ),
-              Expanded(
-                child: FutureBuilder<List<Document>>(
-                  future: DatabaseService.instance.getDocumentsByCategory(
-                    widget.category.id,
-                    spaceId: activeId,
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: 2.4,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (_, i) => _SubFolderCard(
+                        cat: children[i],
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  CategoryDetailScreen(category: children[i]),
+                            ),
+                          );
+                        },
+                      ),
+                      childCount: children.length,
+                    ),
                   ),
+                ),
+              ],
+              SliverFillRemaining(
+                hasScrollBody: true,
+                child: FutureBuilder<List<Document>>(
+                  future: DatabaseService.instance
+                      .getDocumentsByCategory(widget.category.id),
                   builder: (context, snap) {
                     final docs = snap.data ?? const <Document>[];
                     if (docs.isEmpty) {
@@ -232,8 +252,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   }
 }
 
-class _SubChip extends StatelessWidget {
-  const _SubChip({required this.cat, required this.onTap});
+class _SubFolderCard extends StatelessWidget {
+  const _SubFolderCard({required this.cat, required this.onTap});
 
   final Category cat;
   final VoidCallback onTap;
@@ -244,25 +264,52 @@ class _SubChip extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
-        width: 130,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: AppColors.primary.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.20),
+          ),
         ),
         child: Row(
           children: [
-            Text(cat.emoji, style: const TextStyle(fontSize: 22)),
-            const SizedBox(width: 8),
+            Text(cat.emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                cat.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.nunito(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    cat.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.nunito(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  FutureBuilder<int>(
+                    future: DatabaseService.instance
+                        .countDocumentsInCategories(
+                      CategoryService.instance.getAllDescendantIds(cat.id),
+                    ),
+                    builder: (context, snap) {
+                      final n = snap.data ?? 0;
+                      return Text(
+                        n == 0
+                            ? 'empty'
+                            : '$n file${n == 1 ? '' : 's'}',
+                        style: GoogleFonts.nunito(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.gray,
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ],
@@ -291,9 +338,22 @@ class _DocTile extends StatelessWidget {
         '${doc.formattedSize} · ${doc.formattedDate}',
         style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w600),
       ),
-      trailing: doc.isBookmarked
-          ? const Icon(Icons.star, color: AppColors.accent, size: 18)
-          : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (doc.isBookmarked)
+            const Padding(
+              padding: EdgeInsets.only(right: 4),
+              child: Icon(Icons.star, color: AppColors.accent, size: 18),
+            ),
+          IconButton(
+            tooltip: 'Share',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.ios_share, size: 20),
+            onPressed: () => shareDocument(context, doc),
+          ),
+        ],
+      ),
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => DocumentViewerScreen(doc: doc)),

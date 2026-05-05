@@ -6,18 +6,17 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 import '../models/category.dart';
-import '../models/space.dart';
 import '../services/calendar_service.dart';
 import '../services/category_service.dart';
 import '../services/database_service.dart';
 import '../services/document_notifier.dart';
 import '../services/file_storage_service.dart';
 import '../services/onboarding_service.dart';
-import '../services/profile_service.dart';
 import '../utils/app_colors.dart';
+import '../utils/constants.dart';
+import '../utils/friendly_error.dart';
 import 'category_picker_widget.dart';
 import 'expiry_date_picker.dart';
-import 'space_picker_widget.dart';
 
 class SaveDocumentSheet extends StatefulWidget {
   const SaveDocumentSheet({
@@ -37,7 +36,6 @@ class _SaveDocumentSheetState extends State<SaveDocumentSheet> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _descCtrl;
   Category? _category;
-  Space? _space;
   DateTime? _expiry;
   int _reminderDays = 30;
   bool _bookmark = false;
@@ -49,11 +47,14 @@ class _SaveDocumentSheetState extends State<SaveDocumentSheet> {
     final base = p.basenameWithoutExtension(widget.sourcePath);
     _nameCtrl = TextEditingController(text: base);
     _descCtrl = TextEditingController();
-    _space = ProfileService.instance.activeSpace;
     if (widget.initialCategoryId != null) {
       _category =
           CategoryService.instance.getCategoryById(widget.initialCategoryId!);
     }
+    // Default to "Other / Unsorted" so the Save button isn't grey on
+    // first open — user can change the category before saving.
+    _category ??=
+        CategoryService.instance.getCategoryById(AppConstants.unsortedCategoryId);
     _loadDefaultReminder();
   }
 
@@ -70,10 +71,7 @@ class _SaveDocumentSheetState extends State<SaveDocumentSheet> {
   }
 
   bool get _canSave =>
-      _nameCtrl.text.trim().isNotEmpty &&
-      _category != null &&
-      _space != null &&
-      !_saving;
+      _nameCtrl.text.trim().isNotEmpty && _category != null && !_saving;
 
   Future<void> _save() async {
     if (!_canSave) return;
@@ -86,7 +84,6 @@ class _SaveDocumentSheetState extends State<SaveDocumentSheet> {
       var doc = await FileStorageService.instance.storeDocument(
         sourcePath: widget.sourcePath,
         categoryId: _category!.id,
-        space: _space!,
         customName: customName,
         expiryDate: _expiry,
         reminderDays: _reminderDays,
@@ -115,7 +112,7 @@ class _SaveDocumentSheetState extends State<SaveDocumentSheet> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Save failed: $e')),
+        SnackBar(content: Text(FriendlyError.from(e))),
       );
     }
   }
@@ -180,12 +177,6 @@ class _SaveDocumentSheetState extends State<SaveDocumentSheet> {
                         hintText: 'Document name',
                       ),
                       onChanged: (_) => setState(() {}),
-                    ),
-                    const SizedBox(height: 14),
-                    _FieldLabel('Space'),
-                    SpacePickerWidget(
-                      selectedId: _space?.id,
-                      onChanged: (s) => setState(() => _space = s),
                     ),
                     const SizedBox(height: 14),
                     _FieldLabel('Category'),
@@ -337,14 +328,12 @@ class _SaveDocumentSheetState extends State<SaveDocumentSheet> {
               ),
               const SizedBox(height: 12),
               Expanded(
-                child: SingleChildScrollView(
-                  controller: scroll,
-                  child: ChangeNotifierProvider.value(
-                    value: CategoryService.instance,
-                    child: CategoryPickerWidget(
-                      selectedId: _category?.id,
-                      onChanged: (c) => Navigator.of(context).pop(c),
-                    ),
+                child: ChangeNotifierProvider.value(
+                  value: CategoryService.instance,
+                  child: CategoryPickerWidget(
+                    selectedId: _category?.id,
+                    scrollController: scroll,
+                    onChanged: (c) => Navigator.of(context).pop(c),
                   ),
                 ),
               ),

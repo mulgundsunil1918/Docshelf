@@ -5,13 +5,12 @@ import 'package:sqflite/sqflite.dart';
 import '../data/default_categories.dart';
 import '../models/category.dart';
 import '../models/document.dart';
-import '../models/space.dart';
 import '../utils/constants.dart';
 
 /// SQLite wrapper for DocShelf.
 ///
-/// Three tables: `documents`, `custom_categories`, `spaces`. Default
-/// categories (the built-in roots) live in code, not the DB.
+/// Two tables: `documents` and `custom_categories`. Default categories
+/// (the built-in roots) live in code, not the DB.
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._();
   DatabaseService._();
@@ -35,7 +34,6 @@ class DatabaseService {
             name TEXT NOT NULL,
             path TEXT NOT NULL UNIQUE,
             categoryId TEXT NOT NULL,
-            spaceId TEXT NOT NULL,
             fileType TEXT NOT NULL,
             sizeBytes INTEGER NOT NULL,
             savedAt INTEGER NOT NULL,
@@ -50,9 +48,6 @@ class DatabaseService {
           'CREATE INDEX idx_documents_category ON documents(categoryId)',
         );
         await db.execute(
-          'CREATE INDEX idx_documents_space ON documents(spaceId)',
-        );
-        await db.execute(
           'CREATE INDEX idx_documents_expiry ON documents(expiryDate)',
         );
         await db.execute('''
@@ -60,18 +55,7 @@ class DatabaseService {
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             parentId TEXT,
-            emoji TEXT NOT NULL DEFAULT '📁',
-            ownerSpaceId TEXT
-          )
-        ''');
-        await db.execute('''
-          CREATE TABLE spaces (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            type TEXT NOT NULL,
-            avatar TEXT NOT NULL,
-            description TEXT,
-            createdAt INTEGER NOT NULL
+            emoji TEXT NOT NULL DEFAULT '📁'
           )
         ''');
       },
@@ -106,100 +90,80 @@ class DatabaseService {
     );
   }
 
-  Future<List<Document>> getAllDocuments({String? spaceId}) async {
+  Future<List<Document>> getAllDocuments() async {
+    final db = await database;
+    final rows = await db.query('documents', orderBy: 'savedAt DESC');
+    return rows.map(Document.fromMap).toList(growable: false);
+  }
+
+  Future<List<Document>> getDocumentsByCategory(String categoryId) async {
     final db = await database;
     final rows = await db.query(
       'documents',
-      where: spaceId == null ? null : 'spaceId = ?',
-      whereArgs: spaceId == null ? null : [spaceId],
+      where: 'categoryId = ?',
+      whereArgs: [categoryId],
       orderBy: 'savedAt DESC',
     );
     return rows.map(Document.fromMap).toList(growable: false);
   }
-
-  Future<List<Document>> getDocumentsByCategory(
-    String categoryId, {
-    String? spaceId,
-  }) async {
-    final db = await database;
-    final where = StringBuffer('categoryId = ?');
-    final args = <Object?>[categoryId];
-    if (spaceId != null) {
-      where.write(' AND spaceId = ?');
-      args.add(spaceId);
-    }
-    final rows = await db.query(
-      'documents',
-      where: where.toString(),
-      whereArgs: args,
-      orderBy: 'savedAt DESC',
-    );
-    return rows.map(Document.fromMap).toList(growable: false);
-  }
-
-  Future<List<Document>> getDocumentsBySpace(String spaceId) =>
-      getAllDocuments(spaceId: spaceId);
 
   Future<List<Document>> getDocumentsByCategories(
-    List<String> categoryIds, {
-    String? spaceId,
-  }) async {
+    List<String> categoryIds,
+  ) async {
     if (categoryIds.isEmpty) return const [];
     final db = await database;
     final placeholders = List.filled(categoryIds.length, '?').join(',');
-    final where = StringBuffer('categoryId IN ($placeholders)');
-    final args = <Object?>[...categoryIds];
-    if (spaceId != null) {
-      where.write(' AND spaceId = ?');
-      args.add(spaceId);
-    }
     final rows = await db.query(
       'documents',
-      where: where.toString(),
-      whereArgs: args,
+      where: 'categoryId IN ($placeholders)',
+      whereArgs: categoryIds,
       orderBy: 'savedAt DESC',
     );
     return rows.map(Document.fromMap).toList(growable: false);
   }
 
-  Future<List<Document>> getBookmarkedDocuments({String? spaceId}) async {
+  Future<List<Document>> getBookmarkedDocuments() async {
     final db = await database;
-    final where = StringBuffer('isBookmarked = 1');
-    final args = <Object?>[];
-    if (spaceId != null) {
-      where.write(' AND spaceId = ?');
-      args.add(spaceId);
-    }
     final rows = await db.query(
       'documents',
-      where: where.toString(),
-      whereArgs: args.isEmpty ? null : args,
+      where: 'isBookmarked = 1',
       orderBy: 'savedAt DESC',
     );
     return rows.map(Document.fromMap).toList(growable: false);
   }
 
-  Future<List<Document>> getExpiringDocuments(
-    int withinDays, {
-    String? spaceId,
-  }) async {
+  Future<List<Document>> getExpiringDocuments(int withinDays) async {
     final db = await database;
     final cutoff = DateTime.now()
         .add(Duration(days: withinDays))
         .millisecondsSinceEpoch;
-    final where = StringBuffer('expiryDate IS NOT NULL AND expiryDate <= ?');
-    final args = <Object?>[cutoff];
-    if (spaceId != null) {
-      where.write(' AND spaceId = ?');
-      args.add(spaceId);
-    }
     final rows = await db.query(
       'documents',
-      where: where.toString(),
-      whereArgs: args,
+      where: 'expiryDate IS NOT NULL AND expiryDate <= ?',
+      whereArgs: [cutoff],
       orderBy: 'expiryDate ASC',
     );
     return rows.map(Document.fromMap).toList(growable: false);
+  }
+
+  Future<int> countDocumentsInCategory(String categoryId) async {
+    final db = await database;
+    final rows = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM documents WHERE categoryId = ?',
+      [categoryId],
+    );
+    return (rows.first['c'] as int?) ?? 0;
+  }
+
+  Future<int> countDocumentsInCategories(List<String> categoryIds) async {
+    if (categoryIds.isEmpty) return 0;
+    final db = await database;
+    final placeholders = List.filled(categoryIds.length, '?').join(',');
+    final rows = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM documents WHERE categoryId IN ($placeholders)',
+      categoryIds,
+    );
+    return (rows.first['c'] as int?) ?? 0;
   }
 
   Future<Document?> getDocumentById(int id) async {
@@ -246,15 +210,6 @@ class DatabaseService {
     );
   }
 
-  Future<int> deleteDocumentsBySpace(String spaceId) async {
-    final db = await database;
-    return db.delete(
-      'documents',
-      where: 'spaceId = ?',
-      whereArgs: [spaceId],
-    );
-  }
-
   Future<void> toggleBookmark(String path, bool bookmarked) async {
     final db = await database;
     await db.update(
@@ -269,12 +224,10 @@ class DatabaseService {
     String oldPath, {
     required String newCategoryId,
     String? newPath,
-    String? newSpaceId,
   }) async {
     final db = await database;
     final patch = <String, Object?>{'categoryId': newCategoryId};
     if (newPath != null) patch['path'] = newPath;
-    if (newSpaceId != null) patch['spaceId'] = newSpaceId;
     await db.update(
       'documents',
       patch,
@@ -293,14 +246,10 @@ class DatabaseService {
     );
   }
 
-  Future<List<Category>> getCustomCategories({String? spaceId}) async {
+  Future<List<Category>> getCustomCategories() async {
     final db = await database;
     final rows = await db.query('custom_categories');
-    final all = rows.map((r) => Category.fromMap(r)).toList();
-    if (spaceId == null) return all;
-    return all
-        .where((c) => c.ownerSpaceId == null || c.ownerSpaceId == spaceId)
-        .toList();
+    return rows.map((r) => Category.fromMap(r)).toList();
   }
 
   Future<void> updateCustomCategory(
@@ -392,43 +341,5 @@ class DatabaseService {
       cur = cat.parentId;
     }
     return names;
-  }
-
-  // ─── Spaces ─────────────────────────────────────────────────────────
-  Future<void> saveSpace(Space s) async {
-    final db = await database;
-    await db.insert(
-      'spaces',
-      s.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  Future<List<Space>> getAllSpaces() async {
-    final db = await database;
-    final rows = await db.query('spaces', orderBy: 'createdAt ASC');
-    return rows.map(Space.fromMap).toList(growable: false);
-  }
-
-  Future<Space?> getSpaceById(String id) async {
-    final db = await database;
-    final rows = await db.query(
-      'spaces',
-      where: 'id = ?',
-      whereArgs: [id],
-      limit: 1,
-    );
-    if (rows.isEmpty) return null;
-    return Space.fromMap(rows.first);
-  }
-
-  Future<void> deleteSpace(String id) async {
-    final db = await database;
-    final batch = db.batch();
-    batch.delete('documents', where: 'spaceId = ?', whereArgs: [id]);
-    batch.delete('custom_categories',
-        where: 'ownerSpaceId = ?', whereArgs: [id]);
-    batch.delete('spaces', where: 'id = ?', whereArgs: [id]);
-    await batch.commit(noResult: true);
   }
 }

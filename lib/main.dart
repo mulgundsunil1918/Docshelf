@@ -9,7 +9,6 @@ import 'screens/splash_screen.dart';
 import 'services/category_service.dart';
 import 'services/document_notifier.dart';
 import 'services/onboarding_service.dart';
-import 'services/profile_service.dart';
 import 'utils/app_theme.dart';
 import 'utils/constants.dart';
 
@@ -22,9 +21,7 @@ Future<void> main() async {
     databaseFactory = databaseFactoryFfi;
   }
 
-  // Bootstrap critical singletons before first frame.
   await CategoryService.instance.load();
-  await ProfileService.instance.load();
 
   final themeMode = await OnboardingService.instance.getThemeMode();
 
@@ -41,7 +38,6 @@ class DocShelfApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: CategoryService.instance),
-        ChangeNotifierProvider.value(value: ProfileService.instance),
         ChangeNotifierProvider.value(value: DocumentNotifier.instance),
         ChangeNotifierProvider(
           create: (_) => ThemeNotifier(initialThemeMode),

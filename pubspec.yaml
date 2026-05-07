@@ -1,7 +1,7 @@
 name: docshelf
 description: "DocShelf — a privacy-first document vault for Indian households."
 publish_to: 'none'
-version: 0.2.0+13
+version: 0.2.0+14
 
 environment:
   sdk: ^3.11.1
@@ -49,6 +49,14 @@ dependencies:
   pdf: ^3.11.1                         # Stitches multi-page scans into a single PDF (offline)
   in_app_review: ^2.0.10               # Native Play Store review prompt (rate-limited by Google server-side)
   flutter_markdown: ^0.7.4              # Read-only markdown rendering for note viewer
+
+  # ─── WYSIWYG note editor ─────────────────────────────────────────
+  # super_editor renders rich text as actual styled text (no asterisks
+  # ever visible). super_editor_markdown round-trips the document model
+  # to/from the markdown we already store on disk, so the on-disk format
+  # doesn't change — the editor just stops exposing the markers.
+  super_editor: 0.3.0-dev.31
+  super_editor_markdown: 0.1.9
   # Note: flutter_quill was removed in v0.2.0+11. The editor now uses a
   # plain Flutter TextField + a Markdown-syntax toolbar — no third-party
   # rendering layer that could silently fail across Android versions.

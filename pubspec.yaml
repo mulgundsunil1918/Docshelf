@@ -1,7 +1,7 @@
 name: docshelf
 description: "DocShelf — a privacy-first document vault for Indian households."
 publish_to: 'none'
-version: 0.2.0+14
+version: 0.2.0+15
 
 environment:
   sdk: ^3.11.1

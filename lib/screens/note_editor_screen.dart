@@ -749,12 +749,27 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       selectionStyle: SelectionStyles(
         selectionColor: AppColors.primary.withValues(alpha: 0.22),
       ),
+      // Re-build the default overlay chain rather than replacing it with
+      // a single desktop caret. `DefaultCaretOverlayBuilder` is desktop-
+      // only (`displayOnAllPlatforms: false` by default) — passing only
+      // it would erase the Android/iOS handle layers that paint the
+      // *blinking caret on touch devices*. Result: no visible cursor
+      // while typing on a phone. The list below mirrors super_editor's
+      // `defaultSuperEditorDocumentOverlayBuilders` but with the indigo
+      // brand colour wired into the per-platform handle builders.
       documentOverlayBuilders: [
-        DefaultCaretOverlayBuilder(
-          caretStyle: const CaretStyle(
-            width: 2,
-            color: AppColors.primary,
-          ),
+        const SuperEditorIosToolbarFocalPointDocumentLayerBuilder(),
+        const SuperEditorIosHandlesDocumentLayerBuilder(
+          handleColor: AppColors.primary,
+        ),
+        const SuperEditorAndroidToolbarFocalPointDocumentLayerBuilder(),
+        const SuperEditorAndroidHandlesDocumentLayerBuilder(
+          caretColor: AppColors.primary,
+        ),
+        // Desktop fallback (mouse/web) — Android & iOS branches return
+        // EmptyBox here because of platform guards inside the builder.
+        const DefaultCaretOverlayBuilder(
+          caretStyle: CaretStyle(width: 2, color: AppColors.primary),
         ),
       ],
     );

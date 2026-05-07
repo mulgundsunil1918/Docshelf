@@ -44,7 +44,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
     _Slide(
       headline: "Reminded. Private. Free. 🛡️",
       body:
-          "Set an expiry date — DocShelf adds it to your phone calendar. Files stay on YOUR device only. No accounts, no upload, no tracking, no ads. The full source is on GitHub.",
+          "Set an expiry date — DocShelf adds it to your phone calendar. Files stay on YOUR device only. No accounts, no upload, no tracking, no ads. Truly local-only.",
       subtext: "",
       illustration: _IllustrationKind.shield,
     ),

@@ -31,7 +31,6 @@ Built with Flutter for Android (iOS later).
 ## Getting started
 
 ```bash
-git clone https://github.com/mulgundsunil1918/Docshelf.git
 cd Docshelf
 flutter pub get
 flutter run

@@ -1049,15 +1049,32 @@ def screen_reminders(w: int, h: int) -> Image.Image:
            font=F("black", int(w * 0.038)),
            fill=DARK_TEXT, anchor="lt")
 
-    # Calendar status row (success bar)
+    # Calendar status row (success bar) — use a drawn check tile
+    # instead of the ✓ glyph (which Pillow + sans-serif font drops as a
+    # tofu box per trap #9 in the prompt).
     cal_y = rl_y + int(w * 0.130)
+    cal_h = int(w * 0.090)
     rounded(d, [sx, cal_y, w - pad - int(w * 0.04),
-                cal_y + int(w * 0.090)],
+                cal_y + cal_h],
             int(w * 0.02), fill=tint(SUCCESS, 60))
+    # Drawn check mark on the left
+    check_size = int(cal_h * 0.55)
+    cx = sx + int(cal_h * 0.20)
+    cy = cal_y + (cal_h - check_size) // 2
+    rounded(d, [cx, cy, cx + check_size, cy + check_size],
+            check_size // 4, fill=SUCCESS)
+    # Two-line check stroke
+    d.line([
+        (cx + check_size * 0.22, cy + check_size * 0.55),
+        (cx + check_size * 0.42, cy + check_size * 0.74),
+        (cx + check_size * 0.78, cy + check_size * 0.32),
+    ], fill="white", width=max(3, int(check_size * 0.14)))
     f_cal = F("bold", int(w * 0.030))
-    text_centered(d, (sx, cal_y), w - pad * 2 - int(w * 0.04),
-                  int(w * 0.090),
-                  "✓ Reminder added to your phone calendar",
+    # Centre the text in the remaining space (right of the check tile)
+    text_x = cx + check_size + int(w * 0.020)
+    text_w = (w - pad - int(w * 0.04)) - text_x
+    text_centered(d, (text_x, cal_y), text_w, cal_h,
+                  "Reminder added to your phone calendar",
                   f_cal, SUCCESS)
     # Bottom nav
     mock_bottom_nav(d, w, h, active_idx=1)
@@ -1215,7 +1232,7 @@ KEY FEATURES
 • Dark mode designed intentionally — not a slap-on
 • Files visible in your file manager at /storage/emulated/0/DocShelf/
 • Files survive uninstall — your data is yours
-• Open-source on GitHub
+• No accounts. No tracking. No ads.
 
 ▸ WHO IT’S FOR
 DocShelf is built for anyone with documents:
@@ -1228,7 +1245,7 @@ DocShelf is built for anyone with documents:
 Examples: passport, driving license, ITR, bank statement, insurance policy, lease agreement, NDA, payslip, car quotation, repair estimate, warranty card, lab report, prescription, marksheet, lesson plan, project report.
 
 ▸ PRIVATE BY DESIGN
-DocShelf has no server. There is no telemetry, no analytics, no cloud sync, no in-app purchases, no ads, no accounts. Files live on your device only. Privacy policy: https://mulgundsunil1918.github.io/Docshelf/privacy.html — read it, the source code is open on GitHub.
+DocShelf has no server. There is no telemetry, no analytics, no cloud sync, no in-app purchases, no ads, no accounts. Files live on your device only. Privacy policy: https://mulgundsunil1918.github.io/Docshelf/privacy.html — read it, you'll see.
 
 ▸ FREE
 DocShelf is free. No ads. Optional “Buy me a chai” support tile if you’d like to chip in — keeps it that way for everyone else.

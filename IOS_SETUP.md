@@ -86,7 +86,7 @@ Store Privacy questionnaire.
 - Pushes AAB to Play Internal track as a **draft** (so you can promote manually)
 
 ### Codemagic one-time setup
-1. Connect the GitHub repo at app.codemagic.io.
+1. Connect this private repo at app.codemagic.io.
 2. **Integrations → App Store Connect**: upload an API key (Issuer ID, Key ID, .p8 file). Name it `codemagic-app-store-connect`.
 3. **Code-signing identities → iOS**: enable automatic signing for `com.docshelf.myapp`.
 4. **Code-signing identities → Android**: upload `docshelf-upload.jks` with alias `docshelf` + the password.
@@ -149,7 +149,7 @@ KEY FEATURES
 • Material 3 design with intentional dark mode
 • Files visible in the Files app — yours to keep
 • Files survive reinstall — your data is yours
-• Open-source on GitHub
+• No accounts. No tracking. No ads.
 
 ▸ WHO IT'S FOR
 DocShelf is built for anyone with documents:
@@ -160,7 +160,7 @@ DocShelf is built for anyone with documents:
 • Anyone tired of cloud subscription apps reading their data
 
 ▸ PRIVATE BY DESIGN
-DocShelf has no server. There is no telemetry, no analytics, no cloud sync, no in-app purchases, no ads, no accounts. Files live on your iPhone only. Privacy policy at https://mulgundsunil1918.github.io/Docshelf/privacy.html — read it, the source code is open on GitHub.
+DocShelf has no server. There is no telemetry, no analytics, no cloud sync, no in-app purchases, no ads, no accounts. Files live on your iPhone only. Privacy policy at https://mulgundsunil1918.github.io/Docshelf/privacy.html — read it, you'll see.
 
 ▸ FREE
 DocShelf is free. Optional "Buy me a chai" support tile if you'd like to chip in — keeps it that way.

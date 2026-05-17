@@ -127,8 +127,13 @@ class ShareViewController: UIViewController {
                     let name = "shared_\(UUID().uuidString).\(ext)"
                     let tmp  = destDir.appendingPathComponent(name)
                     try? data.write(to: tmp)
+                    // Use absoluteString so the path starts with "file://"
+                    // — receive_sharing_intent's getAbsolutePath() strips
+                    // the prefix, recognising it correctly on both real
+                    // devices (/private/var/mobile/…) and the simulator.
+                    let tmpUrl = tmp.absoluteString.removingPercentEncoding ?? tmp.path
                     continuation.resume(returning: SharedMediaFile(
-                        path: tmp.path, type: mediaType))
+                        path: tmpUrl, type: mediaType))
                     return
                 }
 
@@ -144,8 +149,11 @@ class ShareViewController: UIViewController {
 
                 do {
                     try FileManager.default.copyItem(at: src, to: dest)
+                    // Use absoluteString (file:///…) so receive_sharing_intent
+                    // recognises the path on both device and simulator.
+                    let destUrl = dest.absoluteString.removingPercentEncoding ?? dest.path
                     continuation.resume(returning: SharedMediaFile(
-                        path: dest.path, type: mediaType))
+                        path: destUrl, type: mediaType))
                 } catch {
                     continuation.resume(returning: nil)
                 }

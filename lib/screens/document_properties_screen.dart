@@ -284,13 +284,22 @@ class _DocumentPropertiesScreenState extends State<DocumentPropertiesScreen> {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: FilledButton.icon(
-                  onPressed: () => Share.shareXFiles(
-                    [XFile(_doc.path)],
-                    text: _doc.name,
+                child: Builder(
+                  builder: (btnCtx) => FilledButton.icon(
+                    onPressed: () {
+                      final box = btnCtx.findRenderObject() as RenderBox?;
+                      final origin = box == null
+                          ? null
+                          : box.localToGlobal(Offset.zero) & box.size;
+                      Share.shareXFiles(
+                        [XFile(_doc.path)],
+                        text: _doc.name,
+                        sharePositionOrigin: origin,
+                      );
+                    },
+                    icon: const Icon(Icons.share),
+                    label: const Text('Share'),
                   ),
-                  icon: const Icon(Icons.share),
-                  label: const Text('Share'),
                 ),
               ),
             ],

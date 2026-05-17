@@ -43,10 +43,17 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
     DocumentNotifier.instance.notifyDocumentChanged();
   }
 
-  Future<void> _share() async {
+  Future<void> _share(BuildContext btnCtx) async {
+    // iOS requires sharePositionOrigin to be a non-zero rect within the
+    // source view's coordinate space — required even on iPhone in iOS 26+.
+    final box = btnCtx.findRenderObject() as RenderBox?;
+    final origin = box == null
+        ? null
+        : box.localToGlobal(Offset.zero) & box.size;
     await Share.shareXFiles(
       [XFile(_doc.path)],
       text: _doc.name,
+      sharePositionOrigin: origin,
     );
   }
 
@@ -103,25 +110,27 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
             ),
             onPressed: _toggleBookmark,
           ),
-          PopupMenuButton<String>(
-            onSelected: (v) {
-              switch (v) {
-                case 'props':
-                  _properties();
-                  break;
-                case 'share':
-                  _share();
-                  break;
-                case 'delete':
-                  _delete();
-                  break;
-              }
-            },
-            itemBuilder: (_) => [
-              const PopupMenuItem(value: 'props', child: Text('Properties')),
-              const PopupMenuItem(value: 'share', child: Text('Share')),
-              const PopupMenuItem(value: 'delete', child: Text('Delete')),
-            ],
+          Builder(
+            builder: (menuCtx) => PopupMenuButton<String>(
+              onSelected: (v) {
+                switch (v) {
+                  case 'props':
+                    _properties();
+                    break;
+                  case 'share':
+                    _share(menuCtx);
+                    break;
+                  case 'delete':
+                    _delete();
+                    break;
+                }
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'props', child: Text('Properties')),
+                const PopupMenuItem(value: 'share', child: Text('Share')),
+                const PopupMenuItem(value: 'delete', child: Text('Delete')),
+              ],
+            ),
           ),
         ],
       ),

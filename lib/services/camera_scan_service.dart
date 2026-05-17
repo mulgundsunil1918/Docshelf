@@ -1,11 +1,11 @@
 import 'dart:io';
-import 'dart:typed_data';
-
 import 'package:cunning_document_scanner/cunning_document_scanner.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// Wraps `cunning_document_scanner` (Google ML Kit Document Scanner on
 /// Android, VisionKit on iOS).
@@ -27,7 +27,22 @@ class CameraScanService {
   ///   - 1 page captured  → returns the path of the JPG directly
   ///   - N pages captured → returns the path of a stitched PDF
   /// Returns null if the user cancelled.
+  /// Throws [PlatformException] with code 'camera_permission_denied' if
+  /// the user has denied camera access, or if the scanner is unavailable.
   Future<String?> scanDocument({int maxPages = 10}) async {
+    // On iOS, VNDocumentCameraViewController requires camera permission.
+    // Request it before launching so we can give a clear error if denied,
+    // rather than letting VisionKit fail silently or crash.
+    if (Platform.isIOS) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        throw PlatformException(
+          code: 'camera_permission_denied',
+          message: 'Camera access denied. Enable it in Settings → DocShelf.',
+        );
+      }
+    }
+
     final pages = await CunningDocumentScanner.getPictures(
       noOfPages: maxPages,
       isGalleryImportAllowed: false,

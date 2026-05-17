@@ -11,7 +11,7 @@ project 'Runner', {
 }
 
 def flutter_root
-  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __dir__)
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
   unless File.exist?(generated_xcode_build_settings_path)
     raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
   end
@@ -31,6 +31,7 @@ target 'Runner' do
   use_frameworks!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
   target 'RunnerTests' do
     inherit! :search_paths
   end
@@ -38,7 +39,10 @@ end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
+    # flutter_additional_ios_build_settings applies Flutter-specific
+    # settings (SWIFT_VERSION etc.) — skip the share extension to avoid
+    # conflicting SWIFT_VERSION values that break pod install.
+    flutter_additional_ios_build_settings(target) unless target.name == 'DocShelfShareExtension'
 
     target.build_configurations.each do |config|
       # Force iOS 13.0 across every pod so older specs don't drag the
@@ -73,12 +77,26 @@ post_install do |installer|
         'PERMISSION_SENSORS=0',
       ].join(' ')
 
-      # Architecture: exclude arm64 simulator slice on Apple Silicon
-      # builders so flutter_quill / pdfx / etc. link cleanly.
-      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
-
       # Strip bitcode (Apple deprecated it in Xcode 14).
       config.build_settings['ENABLE_BITCODE'] = 'NO'
     end
+  end
+
+  # ── Fix: Xcode 15 ExtractAppIntentsMetadata cycle with app extensions ──
+  # Xcode 15 added a build phase that scans embedded .appex files for App
+  # Intents metadata. This creates a circular dependency: embedding the
+  # share extension requires the phase to complete, but the phase needs the
+  # extension to already be embedded. DocShelf doesn't use App Intents, so
+  # we disable the scan entirely by setting APPINTENTS_SWIFT_LIBRARY_PATH
+  # to empty on the Runner (main app) target in the main project.
+  require 'xcodeproj'
+  main_project_path = File.expand_path('../Runner.xcodeproj', __FILE__)
+  main_project = Xcodeproj::Project.open(main_project_path)
+  runner = main_project.targets.find { |t| t.name == 'Runner' }
+  if runner
+    runner.build_configuration_list.build_configurations.each do |c|
+      c.build_settings['APPINTENTS_SWIFT_LIBRARY_PATH'] = ''
+    end
+    main_project.save
   end
 end

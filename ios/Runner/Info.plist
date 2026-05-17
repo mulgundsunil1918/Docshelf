@@ -53,6 +53,9 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>DocShelf does not use Face ID. (Reserved for a future optional app-lock feature.)</string>
 
+	<key>NSAppleMusicUsageDescription</key>
+	<string>DocShelf stores audio files (voice memos, recordings) in your document vault. We do not access or play your Apple Music library.</string>
+
 	<!-- ─── Sharing into DocShelf from other apps ─────────────────── -->
 	<!-- Lets users tap Share → DocShelf in any other app to import a
 	     file. Maps to receive_sharing_intent + open_filex. -->
@@ -81,6 +84,21 @@
 				<string>com.adobe.pdf</string>
 				<string>com.microsoft.word.doc</string>
 				<string>org.openxmlformats.wordprocessingml.document</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- ─── URL scheme for receive_sharing_intent ──────────────────── -->
+	<!-- The Share Extension opens this URL after saving files to the     -->
+	<!-- App Group container. The receive_sharing_intent plugin           -->
+	<!-- intercepts URLs with this scheme and delivers the shared files   -->
+	<!-- via getInitialMedia() / getMediaStream().                        -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>ShareMedia-com.docshelf.myapp</string>
 			</array>
 		</dict>
 	</array>

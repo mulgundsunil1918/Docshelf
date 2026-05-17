@@ -131,29 +131,52 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ),
             ],
           ),
-          body: _grid
-              ? _GridView(
-                  roots: roots,
-                  editMode: _editMode,
-                  onRename: _renameCategory,
-                  onAddSub: _addSub,
-                  onDelete: _deleteCategory,
-                )
-              : _ListView(
-                  roots: roots,
-                  expanded: _expanded,
-                  onToggle: (id) => setState(() {
-                    if (_expanded.contains(id)) {
-                      _expanded.remove(id);
-                    } else {
-                      _expanded.add(id);
-                    }
-                  }),
-                  editMode: _editMode,
-                  onRename: _renameCategory,
-                  onAddSub: _addSub,
-                  onDelete: _deleteCategory,
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Text(
+                  'It\'s your library — add folders, delete what you don\'t need, '
+                  'and customise however you like.',
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.45),
+                    height: 1.4,
+                  ),
                 ),
+              ),
+              Expanded(
+                child: _grid
+                    ? _GridView(
+                        roots: roots,
+                        editMode: _editMode,
+                        onRename: _renameCategory,
+                        onAddSub: _addSub,
+                        onDelete: _deleteCategory,
+                      )
+                    : _ListView(
+                        roots: roots,
+                        expanded: _expanded,
+                        onToggle: (id) => setState(() {
+                          if (_expanded.contains(id)) {
+                            _expanded.remove(id);
+                          } else {
+                            _expanded.add(id);
+                          }
+                        }),
+                        editMode: _editMode,
+                        onRename: _renameCategory,
+                        onAddSub: _addSub,
+                        onDelete: _deleteCategory,
+                      ),
+              ),
+            ],
+          ),
         );
       },
     );

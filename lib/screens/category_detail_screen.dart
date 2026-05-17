@@ -175,71 +175,82 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
               ),
             ],
           ),
-          body: CustomScrollView(
-            slivers: [
-              if (children.isNotEmpty) ...[
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-                  sliver: SliverToBoxAdapter(
-                    child: Text(
-                      'Subfolders',
-                      style: GoogleFonts.nunito(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.gray,
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 2.4,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (_, i) => _SubFolderCard(
-                        cat: children[i],
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  CategoryDetailScreen(category: children[i]),
+          body: FutureBuilder<List<Document>>(
+            future: DatabaseService.instance
+                .getDocumentsByCategory(widget.category.id),
+            builder: (context, snap) {
+              final docs = snap.data ?? const <Document>[];
+              return RefreshIndicator(
+                onRefresh: () async {
+                  if (mounted) setState(() {});
+                },
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    if (children.isNotEmpty) ...[
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+                        sliver: SliverToBoxAdapter(
+                          child: Text(
+                            'Subfolders',
+                            style: GoogleFonts.nunito(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.gray,
+                              letterSpacing: 0.6,
                             ),
-                          );
-                        },
+                          ),
+                        ),
                       ),
-                      childCount: children.length,
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 10,
+                            crossAxisSpacing: 10,
+                            childAspectRatio: 2.4,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (_, i) => _SubFolderCard(
+                              cat: children[i],
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => CategoryDetailScreen(
+                                        category: children[i]),
+                                  ),
+                                );
+                              },
+                            ),
+                            childCount: children.length,
+                          ),
+                        ),
+                      ),
+                    ],
+                    // hasScrollBody must match whether the child scrolls.
+                    // When empty, the child is a static Center widget — using
+                    // hasScrollBody: true causes a RenderFlex overflow on
+                    // iOS overscroll because Flutter tries to size a
+                    // non-scrollable child as if it were scrollable.
+                    SliverFillRemaining(
+                      hasScrollBody: docs.isNotEmpty,
+                      child: docs.isEmpty
+                          ? _Empty(onTap: _importFile)
+                          : ListView.separated(
+                              padding:
+                                  const EdgeInsets.fromLTRB(12, 4, 12, 80),
+                              itemCount: docs.length,
+                              separatorBuilder: (_, __) =>
+                                  const Divider(height: 1, indent: 60),
+                              itemBuilder: (_, i) => _DocTile(doc: docs[i]),
+                            ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-              SliverFillRemaining(
-                hasScrollBody: true,
-                child: FutureBuilder<List<Document>>(
-                  future: DatabaseService.instance
-                      .getDocumentsByCategory(widget.category.id),
-                  builder: (context, snap) {
-                    final docs = snap.data ?? const <Document>[];
-                    if (docs.isEmpty) {
-                      return _Empty(onTap: _importFile);
-                    }
-                    return ListView.separated(
-                      padding:
-                          const EdgeInsets.fromLTRB(12, 4, 12, 80),
-                      itemCount: docs.length,
-                      separatorBuilder: (_, __) =>
-                          const Divider(height: 1, indent: 60),
-                      itemBuilder: (_, i) => _DocTile(doc: docs[i]),
-                    );
-                  },
-                ),
-              ),
-            ],
+              );
+            },
           ),
           floatingActionButton: _FabSpeedDial(
             onImport: _importFile,

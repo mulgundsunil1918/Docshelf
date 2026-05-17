@@ -343,7 +343,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _reportBug() async {
     final platformLine = Platform.isAndroid
         ? 'Android ${Platform.operatingSystemVersion}'
-        : Platform.operatingSystem;
+        : 'iOS ${Platform.operatingSystemVersion}';
     final body = '''
 [Describe the bug here]
 

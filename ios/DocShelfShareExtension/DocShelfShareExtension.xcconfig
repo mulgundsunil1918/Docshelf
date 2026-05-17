@@ -1,0 +1,4 @@
+// DocShelfShareExtension.xcconfig
+// Include Flutter's Generated.xcconfig so FLUTTER_BUILD_NAME and
+// FLUTTER_BUILD_NUMBER are available to the extension's Info.plist.
+#include? "../Flutter/Generated.xcconfig"

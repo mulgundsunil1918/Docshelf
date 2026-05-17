@@ -92,10 +92,10 @@ class _MainShellState extends State<MainShell> {
         // Tiny delay lets the splash → main-shell transition complete
         // on slower devices before the route push fires.
         await Future<void>.delayed(const Duration(milliseconds: 200));
-        if (!mounted) return;
-        await _onSharedFiles(files);
+        if (mounted) await _onSharedFiles(files);
       }
-      // Always reset so the next launch isn't a replay of this intent.
+      // Always reset — even if we skipped processing due to unmount — so
+      // the next cold start doesn't replay the same intent.
       inst.reset();
     });
   }

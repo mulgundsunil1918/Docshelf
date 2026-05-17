@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
+
 /// Maps raw exceptions to user-readable messages.
 ///
 /// Rule: never let `[firebase/...]`, `FileSystemException: errno = 13`,
@@ -16,6 +18,9 @@ class FriendlyError {
   static String from(Object error, {String fallback = 'Something went wrong.'}) {
     if (error is FileSystemException) {
       return _fileSystemMessage(error);
+    }
+    if (error is PlatformException) {
+      return _platformMessage(error, fallback);
     }
     if (error is FormatException) {
       return "We couldn't read that file's name or path.";
@@ -46,11 +51,26 @@ class FriendlyError {
         msg.toLowerCase().contains('user cancelled')) {
       return 'Cancelled.';
     }
-    if (msg.toLowerCase().contains('camera')) {
-      return 'Camera unavailable. Make sure another app isn\'t using it.';
-    }
-
     // Default: don't leak the raw exception text.
+    return fallback;
+  }
+
+  static String _platformMessage(PlatformException e, String fallback) {
+    final code = e.code.toLowerCase();
+    final msg = (e.message ?? '').toLowerCase();
+    if (code.contains('camera_permission') ||
+        msg.contains('permission') && (code.contains('camera') || msg.contains('camera'))) {
+      return 'Camera access denied. Enable it in Settings → DocShelf.';
+    }
+    if (code.contains('camera') || msg.contains('camera') ||
+        msg.contains('scanner') || msg.contains('not supported') ||
+        msg.contains('scanning is not available') ||
+        msg.contains('document scan')) {
+      return 'Document scanner is not available on this device.';
+    }
+    if (code.contains('permission') || msg.contains('permission denied')) {
+      return 'Permission denied. Please enable access in Settings → DocShelf.';
+    }
     return fallback;
   }
 

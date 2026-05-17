@@ -139,29 +139,51 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   }
 }
 
-class _Viewer extends StatelessWidget {
+class _Viewer extends StatefulWidget {
   const _Viewer({required this.doc});
   final Document doc;
 
   @override
+  State<_Viewer> createState() => _ViewerState();
+}
+
+class _ViewerState extends State<_Viewer> {
+  String? _resolvedPath;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  Future<void> _resolve() async {
+    // Remaps stale iOS container-UUID paths after reinstall.
+    final path = await FileStorageService.instance.resolvedPath(widget.doc);
+    if (mounted) setState(() => _resolvedPath = path);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final exists = File(doc.path).existsSync();
-    if (!exists) {
-      return _MissingFile(path: doc.path);
+    final path = _resolvedPath;
+    if (path == null) {
+      return const Center(child: CircularProgressIndicator());
     }
-    switch (doc.fileType) {
+    if (!File(path).existsSync()) {
+      return _MissingFile(path: path);
+    }
+    switch (widget.doc.fileType) {
       case DocFileType.pdf:
-        return _PdfViewer(path: doc.path);
+        return _PdfViewer(path: path);
       case DocFileType.image:
-        return _ImageViewer(path: doc.path);
+        return _ImageViewer(path: path);
       case DocFileType.video:
-        return _VideoViewer(path: doc.path);
+        return _VideoViewer(path: path);
       case DocFileType.note:
-        return _NoteViewer(doc: doc);
+        return _NoteViewer(doc: widget.doc);
       case DocFileType.audio:
       case DocFileType.document:
       case DocFileType.other:
-        return _ExternalOpener(doc: doc);
+        return _ExternalOpener(doc: widget.doc);
     }
   }
 }

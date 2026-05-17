@@ -90,6 +90,18 @@ class DatabaseService {
     );
   }
 
+  /// Fixes a stale iOS container-UUID path in-place.
+  /// Called by FileStorageService.resolvedPath() after a successful remap.
+  Future<void> updateDocumentPath(int id, String newPath) async {
+    final db = await database;
+    await db.update(
+      'documents',
+      {'path': newPath},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<List<Document>> getAllDocuments() async {
     final db = await database;
     final rows = await db.query('documents', orderBy: 'savedAt DESC');

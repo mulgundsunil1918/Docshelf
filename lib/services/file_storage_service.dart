@@ -194,4 +194,34 @@ class FileStorageService {
   }
 
   bool fileExists(String path) => File(path).existsSync();
+
+  // ─── iOS container-UUID remapping ────────────────────────────────────
+  // On iOS, files are stored under an Application container UUID that
+  // changes every time the app is reinstalled (common during development).
+  // Absolute paths saved in the DB break because they reference the old
+  // UUID.  This method detects the stale path, extracts the relative
+  // portion after "Documents/", and rebuilds it under the current container.
+  // If remapping succeeds the DB is updated in-place so subsequent opens
+  // are instant.
+  Future<String> resolvedPath(Document doc) async {
+    final stored = doc.path;
+    if (File(stored).existsSync()) return stored;
+    if (!Platform.isIOS) return stored;
+
+    // Extract everything from "Documents/" onwards (e.g. "DocShelf/Foo/bar.pdf")
+    const marker = '/Documents/';
+    final idx = stored.indexOf(marker);
+    if (idx == -1) return stored;
+    final relative = stored.substring(idx + marker.length); // "DocShelf/Foo/bar.pdf"
+
+    final docsDir = (await getApplicationDocumentsDirectory()).path;
+    final remapped = p.join(docsDir, relative);
+    if (!File(remapped).existsSync()) return stored; // can't find it either way
+
+    // Persist the corrected path so we never remap this doc again.
+    if (doc.id != null) {
+      await DatabaseService.instance.updateDocumentPath(doc.id!, remapped);
+    }
+    return remapped;
+  }
 }

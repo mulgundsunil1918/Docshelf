@@ -1,19 +1,28 @@
 import UIKit
 
-// MARK: - Data model (must match receive_sharing_intent's SharedMediaFile exactly)
+// MARK: - Data model
+//
+// MUST match receive_sharing_intent v1.8.1's SharedMediaFile exactly.
+// Critical differences from a naive implementation:
+//   • type is a String enum ("image","video","file","url","text") — NOT Int
+//   • mimeType and message fields must be present (optional but in the struct)
+// The plugin force-unwraps its JSON decode, so any mismatch = crash (SIGILL).
 
 struct SharedMediaFile: Codable {
     var path: String
+    var mimeType: String?
     var thumbnail: String?
     var duration: Double?
+    var message: String?
     var type: SharedMediaType
 
-    enum SharedMediaType: Int, Codable {
-        case image = 0
-        case video = 1
-        case file  = 2
-        case url   = 3
-        case text  = 4
+    // Raw values must match plugin's enum case names exactly (String rawValue)
+    enum SharedMediaType: String, Codable {
+        case image
+        case video
+        case file
+        case url
+        case text
     }
 }
 
